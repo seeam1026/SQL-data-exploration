@@ -310,7 +310,7 @@ Cleaning Data
 
   	update runner_orders
   	set distance = replace(distance, 'km', ''),
-  	duration = trim(regex_p_replace(duration, 'minute|mins|min|minutes', ''));
+  	duration = trim(regexp_replace(duration, 'minute|mins|min|minutes', ''));
 
   	select * from runner_orders;
   ```
