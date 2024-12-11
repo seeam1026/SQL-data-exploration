@@ -365,14 +365,10 @@ FROM customer_orders;
 
 ### **Q3. How many successful orders were delivered by each runner?**
 ```sql
-SELECT
-  runner_id,
-  COUNT(order_id) AS successful_orders
-FROM updated_runner_orders
-WHERE cancellation IS NULL
-OR cancellation NOT IN ('Restaurant Cancellation', 'Customer Cancellation')
-GROUP BY runner_id
-ORDER BY successful_orders DESC;
+ SELECT runner_id, count(order_id) as successful_orders
+ FROM runner_orders
+ WHERE cancellation is NULL
+ GROUP BY runner_id;
 ```
 
 | runner_id | successful_orders |
