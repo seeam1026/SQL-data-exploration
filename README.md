@@ -420,18 +420,16 @@ GROUP BY customer_id;
 
 ### **Q6. What was the maximum number of pizzas delivered in a single order?**
 ```SQL
-SELECT MAX(pizza_count) AS max_count
+SELECT MAX(pizza_count_per_order) AS max_pizza_count
 FROM (
   SELECT
-    co.order_id,
-    COUNT(co.pizza_id) AS pizza_count
-  FROM updated_customer_orders AS co
-  INNER JOIN updated_runner_orders AS ro
-    ON co.order_id = ro.order_id
-  WHERE 
-    ro.cancellation IS NULL
-    OR ro.cancellation NOT IN ('Restaurant Cancellation', 'Customer Cancellation')
-  GROUP BY co.order_id) AS mycount;
+	co.order_id,
+	COUNT(co.pizza_id) AS pizza_count_per_order
+  FROM runner_orders AS ru
+  JOIN customer_orders AS co
+  	ON co.order_id = ru.order_id
+  WHERE ru.cancellation is NULL
+  GROUP BY co.order_id) AS cte;
  ``` 
 
 | max_count |
