@@ -164,7 +164,7 @@ This table contains all of the **```topping_name```** values with their correspo
 <summary>
 Create table
 </summary>
-** **
+
 	DROP TABLE IF EXISTS runners;
 	CREATE TABLE runners (
 	  "runner_id" INTEGER,
