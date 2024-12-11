@@ -284,7 +284,7 @@ Create table
 <summary>
 Cleaning Data
 </summary>
-** **
+
 ## Clean customer_orders data:
 ** **
 - Converting ```null``` and ```NaN``` values into blanks ```''``` in ```exclusions``` and ```extras```
