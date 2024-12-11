@@ -293,6 +293,7 @@ Cleaning Data
 	set exclusions = case when exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' then NUll ELSE exclusions end;
 	update customer_orders 
  	set extras = case when extras = '' or extras LIKE '%null%' or extras LIKE '%nan%" then NULL ELSE extras end;
+```
 ## Clean runner_orders data:
 **```runner_orders```**
 
@@ -314,7 +315,7 @@ Cleaning Data
   	set duration = trim(regex_p_replace(duration, 'minute|mins|min|minutes', ''));
 
   	select * from runner_orders;
-  
+  ```
 	
 </details>
 
