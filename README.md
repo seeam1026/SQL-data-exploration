@@ -299,7 +299,6 @@ Cleaning Data
 
 - Converting ```'null'``` text values into null values for ```pickup_time```, ```distance``` and ```duration```
 - Extracting only numbers and decimal spaces for the distance and duration columns
-  - Use regular expressions and ```NULLIF``` to convert non-numeric entries to null values
 - Converting blanks, ```'null'``` and ```NaN``` into null values for cancellation
 - Saving the transformations in a temporary table
   ```sql
