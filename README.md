@@ -293,7 +293,8 @@ Cleaning Data
 ** **
 	update customer_orders
 	set exclusions = case when exclusions = '' or exclusions = '%null%' or exclusions = '%nan%' then NUll ELSE exclusions end;
-  - Blanks indicate that the customer requested no extras/exclusions for the pizza, whereas ```null``` values would be ambiguous.
+** **
+- Blanks indicate that the customer requested no extras/exclusions for the pizza, whereas ```null``` values would be ambiguous.
 - Saving the transformations in a temporary table
   - We want to avoid permanently changing the raw data via ```UPDATE``` commands if possible.
    
