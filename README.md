@@ -439,15 +439,14 @@ FROM (
 
 ### **Q7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?**
 ```SQL
-SELECT 
+SELECT
   co.customer_id,
-  SUM (CASE WHEN co.exclusions IS NOT NULL OR co.extras IS NOT NULL THEN 1 ELSE 0 END) AS changes,
-  SUM (CASE WHEN co.exclusions IS NULL OR co.extras IS NULL THEN 1 ELSE 0 END) AS no_change
-FROM updated_customer_orders AS co
-INNER JOIN updated_runner_orders AS ro
-  ON co.order_id = ro.order_id
-WHERE ro.cancellation IS NULL
-  OR ro.cancellation NOT IN ('Restaurant Cancellation', 'Customer Cancellation')
+  SUM(CASE WHEN co.exclusions IS NOT NULL OR co.extras IS NOT NULL THEN 1 ELSE 0 END) AS at_least_1_change,
+  SUM(CASE WHEN co.exclusions is NULL AND co.extras is NULL THEN 1 ELSE 0 END) AS no_changes 
+FROM runner_orders AS ru
+JOIN customer_orders AS co
+  ON ru.order_id = co.order_id
+WHERE ru.cancellation is NULL
 GROUP BY co.customer_id
 ORDER BY co.customer_id;
 ```
