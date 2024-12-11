@@ -290,13 +290,9 @@ Cleaning Data
 - Converting ```null``` and ```NaN``` values into blanks ```''``` in ```exclusions``` and ```extras```
 ** **
 	update customer_orders
-	set exclusions = case when exclusions = '' or exclusions = '%null%' or exclusions = '%nan%' then NUll ELSE exclusions end;
-
-** **
-- Blanks indicate that the customer requested no extras/exclusions for the pizza, whereas ```null``` values would be ambiguous.
-- Saving the transformations in a temporary table
-  - We want to avoid permanently changing the raw data via ```UPDATE``` commands if possible.
-   
+	set exclusions = case when exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' then NUll ELSE exclusions end;
+	update customer_orders 
+ 	set extras = case when extras = '' or extras LIKE '%null%' or extras LIKE '%nan%" then NULL ELSE extras end;
 ## Clean runner_orders data:
 **```runner_orders```**
 
@@ -305,6 +301,20 @@ Cleaning Data
   - Use regular expressions and ```NULLIF``` to convert non-numeric entries to null values
 - Converting blanks, ```'null'``` and ```NaN``` into null values for cancellation
 - Saving the transformations in a temporary table
+  ```sql
+  	update runner_orders
+  	set pickup_time = case when pickup_time LIKE '%null%' then NULL else pickup_time end,
+  	distance = case when distance LIKE '%null%' then NULL ELSE distance end,
+  	duration = case when duration like '%null%' then NULL ELSE duration end,
+  	cancellation = case when cancellation like '%null%' or cancellation like '%nan%' or cancellation = '' then NULL else cancellation end;
+
+  	update runner_orders
+  	set distance = replace(distance, 'km', '');
+  	update runner_orders
+  	set duration = trim(regex_p_replace(duration, 'minute|mins|min|minutes', ''));
+
+  	select * from runner_orders;
+  
 	
 </details>
 
