@@ -310,9 +310,8 @@ Cleaning Data
   	cancellation = case when cancellation like '%null%' or cancellation like '%nan%' or cancellation = '' then NULL else cancellation end;
 
   	update runner_orders
-  	set distance = replace(distance, 'km', '');
-  	update runner_orders
-  	set duration = trim(regex_p_replace(duration, 'minute|mins|min|minutes', ''));
+  	set distance = replace(distance, 'km', '') 
+  	duration = trim(regex_p_replace(duration, 'minute|mins|min|minutes', ''));
 
   	select * from runner_orders;
   ```
