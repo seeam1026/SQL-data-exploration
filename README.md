@@ -164,8 +164,6 @@ This table contains all of the **```topping_name```** values with their correspo
 <summary>
 Create table
 </summary>
-- This is the raw data
-  
 ** **
 	DROP TABLE IF EXISTS runners;
 	CREATE TABLE runners (
