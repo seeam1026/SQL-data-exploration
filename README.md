@@ -290,10 +290,10 @@ Cleaning Data
 **```customer_orders```**
 - Converting ```null``` and ```NaN``` values into blanks ```''``` in ```exclusions``` and ```extras```
 ```sql
-	update customer_orders
-	set exclusions = case when exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' then NUll ELSE exclusions end;
-	update customer_orders 
- 	set extras = case when extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' then NULL ELSE extras end;
+	UPDATE customer_orders
+	SETset exclusions = CASE WHEN exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' THEN NUll ELSE exclusions END;
+	UPDATE customer_orders 
+ 	SET extras = CASE WHEN extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' THEN NULL ELSE extras END;
 ```
 ## Clean runner_orders data:
 **```runner_orders```**
@@ -302,37 +302,37 @@ Cleaning Data
 - Extracting only numbers and decimal spaces for the distance and duration columns
 - Converting blanks, ```'null'``` and ```NaN``` into null values for cancellation 
   ```sql
-  	update runner_orders
-  	set pickup_time = case when pickup_time LIKE '%null%' then NULL else pickup_time end,
-  	distance = case when distance LIKE '%null%' then NULL ELSE distance end,
-  	duration = case when duration like '%null%' then NULL ELSE duration end,
-  	cancellation = case when cancellation like '%null%' or cancellation like '%nan%' or cancellation = '' then NULL else cancellation end;
+  	UPDATE runner_orders
+  	SET pickup_time = CASE WHEN pickup_time LIKE '%null%' THEN NULL ELSE pickup_time END,
+  	distance = CASE WHEN distance LIKE '%null%' THEN NULL ELSE distance END,
+  	duration = CASE WHEN duration LIKE '%null%' THEN NULL ELSE duration END,
+  	cancellation = CASE WHEN cancellation LIKE '%null%' or cancellation LIKE '%nan%' or cancellation = '' THEN NULL ELSE cancellation END;
 
-  	update runner_orders
-  	set distance = replace(distance, 'km', ''),
+  	UPDATE runner_orders
+  	SET distance = replace(distance, 'km', ''),
   	duration = trim(regexp_replace(duration, 'minute|mins|min|minutes', ''));
 
-  	select * from runner_orders;
+  	SELECT * FROM runner_orders;
   ```
 
   ## Clean pizza_recipes data:
   **```pizza_recipes```**
 
   ```sql
-	create temp table temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
+	CREATE TEMP TABLE temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
 	INSERT INTO temp_pizza_recipe(pizza_id, pizza_topping)
-	select pizza_id, unnest(string_to_array(toppings, ',')) 
-	from pizza_recipes;
-	truncate table pizza_recipes;
-	insert into pizza_recipes(pizza_id, toppings)
-	select pizza_id, pizza_topping from temp_pizza_recipe;
-	select * from pizza_recipes;
+	SELECT pizza_id, unnest(string_to_array(toppings, ',')) 
+	FROM pizza_recipes;
+	TRUNCATE TABLE pizza_recipes;
+	INSERT INTO pizza_recipes(pizza_id, toppings)
+	SELECT pizza_id, pizza_topping FROM temp_pizza_recipe;
+	SELECT * FROM pizza_recipes;
 	
-	Drop table if exists temp_pizza_recipe;
+	DROP TABLE IF EXISTS temp_pizza_recipe;
 	
-	alter table pizza_recipes 
-	alter column toppings type int
-	using toppings::int;
+	ALTER TABLE pizza_recipes 
+	ALTER COLUMN toppings TYPE INT
+	USING toppings::INT;
   ```
 	
 </details>
