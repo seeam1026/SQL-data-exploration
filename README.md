@@ -157,9 +157,10 @@ This table contains all of the **```topping_name```** values with their correspo
 |12        |Tomato Sauce|
 
 </details>
+---
 
 ## ♻️Data Cleaning
-
+** **
 <details>
 <summary>
 Create table
