@@ -355,8 +355,8 @@ FROM customer_orders
 
 ### **Q2. How many unique customer orders were made?**
 ```sql
-SELECT COUNT (DISTINCT order_id) AS order_count
-FROM updated_customer_orders;
+SELECT COUNT(DISTINCT order_id) as order_count
+FROM customer_orders;
 ```
 |order_count|
 |-----------|
