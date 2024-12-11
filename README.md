@@ -420,7 +420,7 @@ GROUP BY customer_id;
 
 ### **Q6. What was the maximum number of pizzas delivered in a single order?**
 ```SQL
-SELECT MAX(pizza_count_per_order) AS max_pizza_count
+SELECT MAX(pizza_count_per_order) AS max_count
 FROM (
   SELECT
 	co.order_id,
@@ -441,8 +441,8 @@ FROM (
 ```SQL
 SELECT
   co.customer_id,
-  SUM(CASE WHEN co.exclusions IS NOT NULL OR co.extras IS NOT NULL THEN 1 ELSE 0 END) AS at_least_1_change,
-  SUM(CASE WHEN co.exclusions is NULL AND co.extras is NULL THEN 1 ELSE 0 END) AS no_changes 
+  SUM(CASE WHEN co.exclusions IS NOT NULL OR co.extras IS NOT NULL THEN 1 ELSE 0 END) AS changes,
+  SUM(CASE WHEN co.exclusions is NULL AND co.extras is NULL THEN 1 ELSE 0 END) AS no_change
 FROM runner_orders AS ru
 JOIN customer_orders AS co
   ON ru.order_id = co.order_id
@@ -463,12 +463,11 @@ ORDER BY co.customer_id;
 ### **Q8. How many pizzas were delivered that had both exclusions and extras?**
 ```SQL
 SELECT
-  SUM(CASE WHEN co.exclusions IS NOT NULL AND co.extras IS NOT NULL THEN 1 ELSE 0 END) as pizza_count
-FROM updated_customer_orders AS co
-INNER JOIN updated_runner_orders AS ro
-  ON co.order_id = ro.order_id
-WHERE ro.cancellation IS NULL
-  OR ro.cancellation NOT IN ('Restaurant Cancellation', 'Customer Cancellation')
+  SUM(CASE WHEN co.exclusions IS NOT NULL AND co.extras IS NOT NULL THEN 1 ELSE 0 END) AS pizza_count
+FROM runner_orders AS ru
+JOIN customer_orders AS co
+  ON co.order_id = ru.order_id
+WHERE ru.cancellation IS NULL;
 ```  
 
 | pizza_count |
