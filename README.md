@@ -347,8 +347,8 @@ Pizza Metrics
 
 ### **Q1. How many pizzas were ordered?**
 ```sql
-SELECT COUNT(*) AS pizza_count
-FROM updated_customer_orders;
+SELECT COUNT(pizza_id) as pizza_count
+FROM customer_orders
 ```
 |pizza_count|
 |-----------|
