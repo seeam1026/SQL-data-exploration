@@ -313,6 +313,26 @@ Cleaning Data
 
   	select * from runner_orders;
   ```
+
+  ## Clean pizza_recipes data:
+  **```pizza_recipes```**
+
+  ```sql
+	create temp table temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
+	INSERT INTO temp_pizza_recipe(pizza_id, pizza_topping)
+	select pizza_id, unnest(string_to_array(toppings, ',')) 
+	from pizza_recipes;
+	truncate table pizza_recipes;
+	insert into pizza_recipes(pizza_id, toppings)
+	select pizza_id, pizza_topping from temp_pizza_recipe;
+	select * from pizza_recipes;
+	
+	Drop table if exists temp_pizza_recipe;
+	
+	alter table pizza_recipes 
+	alter column toppings type int
+	using toppings::int;
+  ```
 	
 </details>
 
