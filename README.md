@@ -288,7 +288,7 @@ Cleaning Data
 ## Clean customer_orders data:
 **```customer_orders```**
 - Converting ```null``` and ```NaN``` values into blanks ```''``` in ```exclusions``` and ```extras```
-
+** **
 	update customer_orders
 	set exclusions = case when exclusions = '' or exclusions = '%null%' or exclusions = '%nan%' then NUll ELSE exclusions end;
 
