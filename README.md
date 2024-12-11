@@ -284,8 +284,9 @@ Create table
 <summary>
 Cleaning Data
 </summary>
+** **
 ## Clean customer_orders data:
-**```customer_orders```**
+****```customer_orders```****
 - Converting ```null``` and ```NaN``` values into blanks ```''``` in ```exclusions``` and ```extras```
   - Blanks indicate that the customer requested no extras/exclusions for the pizza, whereas ```null``` values would be ambiguous.
 - Saving the transformations in a temporary table
