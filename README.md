@@ -355,7 +355,7 @@ FROM customer_orders
 
 ### **Q2. How many unique customer orders were made?**
 ```sql
-SELECT COUNT(DISTINCT order_id) as order_count
+SELECT COUNT(DISTINCT order_id) AS order_count
 FROM customer_orders;
 ```
 |order_count|
@@ -365,7 +365,8 @@ FROM customer_orders;
 
 ### **Q3. How many successful orders were delivered by each runner?**
 ```sql
- SELECT runner_id, count(order_id) as successful_orders
+ SELECT runner_id,
+	COUNT(order_id) AS successful_orders
  FROM runner_orders
  WHERE cancellation is NULL
  GROUP BY runner_id;
@@ -380,40 +381,20 @@ FROM customer_orders;
 
 ### **Q4. How many of each type of pizza was delivered?**
 ```SQL
-SELECT
-  pn.pizza_name,
-  COUNT(co.*) AS pizza_type_count
-FROM updated_customer_orders AS co
-INNER JOIN pizza_runner.pizza_names AS pn
-   ON co.pizza_id = pn.pizza_id
-INNER JOIN pizza_runner.runner_orders AS ro
-   ON co.order_id = ro.order_id
-WHERE cancellation IS NULL
-OR cancellation NOT IN ('Restaurant Cancellation', 'Customer Cancellation')
-GROUP BY pn.pizza_name
-ORDER BY pn.pizza_name;
+SELECT  pizza_names.pizza_name,
+	cte.pizza_type_count
+FROM pizza_names
+JOIN	
+	(SELECT co.pizza_id,
+		COUNT(co.order_id) AS pizza_type_count
+	FROM runner_orders AS ru
+	JOIN customer_orders AS co 
+	ON co.order_id = ru.order_id 
+	WHERE ru.cancellation is NULL
+	GROUP BY co.pizza_id) AS cte
+ON cte.pizza_id = pizza_names.pizza_id
 ```
 
-OR
-
-```SQL
-SELECT
-  pn.pizza_name,
-  COUNT(co.*) AS pizza_type_count
-FROM updated_customer_orders AS co
-INNER JOIN pizza_runner.pizza_names AS pn
-   ON co.pizza_id = pn.pizza_id
-WHERE EXISTS (
-  SELECT 1 FROM updated_runner_orders AS ro
-   WHERE ro.order_id = co.order_id
-   AND (
-    ro.cancellation IS NULL
-    OR ro.cancellation NOT IN ('Restaurant Cancellation', 'Customer Cancellation')
-  )
-)
-GROUP BY pn.pizza_name
-ORDER BY pn.pizza_name;
-```
 | pizza_name | pizza_type_count |
 |------------|------------------|
 | Meatlovers | 9                |
