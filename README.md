@@ -544,27 +544,18 @@ ORDER BY start_of_week;
 
 ### **Q2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?**
 ```SQL
-WITH runner_pickups AS (
-  SELECT
-    ro.runner_id,
-    ro.order_id,
-    co.order_time,
-    ro.pickup_time,
-    (pickup_time - order_time) AS time_to_pickup
-  FROM updated_runner_orders AS ro
-  INNER JOIN updated_customer_orders AS co
-    ON ro.order_id = co.order_id
-)
-SELECT 
-  runner_id,
-  date_part('minutes', AVG(time_to_pickup)) AS avg_arrival_minutes
-FROM runner_pickups
-GROUP BY runner_id
-ORDER BY runner_id;
+SELECT
+  ru.runner_id,
+  DATE_PART('minute', AVG(ru.pickup_time::timestamp - co.order_time)) AS avg_arrival_minutes
+FROM runner_orders AS ru
+JOIN customer_orders AS co 
+ ON co.order_id = ru.order_id
+WHERE ru.cancellation IS NULL
+GROUP BY ru.runner_id;
 ```
 | runner_id | avg_arrival_minutes |
 |-----------|---------------------|
-| 1         | -4                  |
+| 1         | 15                  |
 | 2         | 23                  |
 | 3         | 10                  |
 
