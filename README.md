@@ -5,8 +5,8 @@
 ## 📕 Table Of Contents
   - 🛠️ [Problem Statement](#problem-statement)
   - 📂 [Dataset](#dataset)
-  - ♻️ [Data Preprocessing](#️-data-preprocessing)
-  - 🚀 [Solutions](#-solutions)
+  - ♻️ [Data Cleaning]
+  - 🔍 [Data Exploration]
 
 ---
 
