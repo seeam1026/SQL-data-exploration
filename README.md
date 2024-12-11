@@ -299,8 +299,7 @@ Cleaning Data
 
 - Converting ```'null'``` text values into null values for ```pickup_time```, ```distance``` and ```duration```
 - Extracting only numbers and decimal spaces for the distance and duration columns
-- Converting blanks, ```'null'``` and ```NaN``` into null values for cancellation
-- Saving the transformations in a temporary table
+- Converting blanks, ```'null'``` and ```NaN``` into null values for cancellation 
   ```sql
   	update runner_orders
   	set pickup_time = case when pickup_time LIKE '%null%' then NULL else pickup_time end,
