@@ -291,9 +291,8 @@ Cleaning Data
 - Converting ```null``` and ```NaN``` values into blanks ```''``` in ```exclusions``` and ```extras```
 ```sql
 	UPDATE customer_orders
-	SET exclusions = CASE WHEN exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' THEN NULL ELSE exclusions END;
-	UPDATE customer_orders 
- 	SET extras = CASE WHEN extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' THEN NULL ELSE extras END;
+	SET exclusions = CASE WHEN exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' THEN NULL ELSE exclusions END,
+	extras = CASE WHEN extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' THEN NULL ELSE extras END;
 ```
 ## Clean runner_orders data:
 **```runner_orders```**
