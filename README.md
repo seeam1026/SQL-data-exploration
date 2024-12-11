@@ -5,8 +5,8 @@
 ## 📕 Table Of Contents
   - 🛠️ [Problem Statement](#problem-statement)
   - 📂 [Dataset](#dataset)
-  - ♻️ [Data Cleaning]
-  - 🔍 [Data Exploration]
+  - ♻️ [Data Cleaning](#data-cleaning)
+  - 🔍 [Data Exploration](#data-exploration)
 
 ---
 
