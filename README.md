@@ -478,10 +478,9 @@ WHERE ru.cancellation IS NULL;
 ### **Q9. What was the total volume of pizzas ordered for each hour of the day?**
 ```SQL
 SELECT
-  DATE_PART('hour', order_time::TIMESTAMP) AS hour_of_day,
-  COUNT(*) AS pizza_count
-FROM updated_customer_orders
-WHERE order_time IS NOT NULL
+  DATE_PART('hour', order_time) AS hour_of_day,
+  COUNT(pizza_id) as pizza_count
+FROM customer_orders
 GROUP BY hour_of_day
 ORDER BY hour_of_day;
 ```
@@ -499,13 +498,11 @@ ORDER BY hour_of_day;
 ### **Q10. What was the volume of orders for each day of the week?**
 ```SQL
 SELECT
-  TO_CHAR(order_time, 'Day') AS day_of_week,
-  COUNT(*) AS pizza_count
-FROM updated_customer_orders
-GROUP BY 
-  day_of_week, 
-  DATE_PART('dow', order_time)
-ORDER BY day_of_week;
+  TO_CHAR(order_time,'day') AS day_of_week,
+  COUNT(pizza_id) AS pizza_count
+FROM customer_orders
+GROUP BY day_of_week, DATE_PART('dow', order_time)
+ORDER BY DATE_PART('dow', order_time);
 ```
 
 | day_of_week | pizza_count |
