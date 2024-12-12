@@ -561,39 +561,30 @@ GROUP BY ru.runner_id;
 
 ### **Q3. Is there any relationship between the number of pizzas and how long the order takes to prepare?**
 ```SQL
-WITH order_count AS (
-  SELECT
-    order_id,
-    order_time,
-    COUNT(pizza_id) AS pizzas_order_count
-  FROM updated_customer_orders
-  GROUP BY order_id, order_time
-), 
-prepare_time AS (
-  SELECT
-    ro.order_id,
-    co.order_time,
-    ro.pickup_time,
-    co.pizzas_order_count,
-    (pickup_time - order_time) AS time_to_pickup
-  FROM updated_runner_orders AS ro
-  INNER JOIN order_count AS co
-    ON ro.order_id = co.order_id
-  WHERE pickup_time IS NOT NULL
-)
-SELECT
-  pizzas_order_count,
-  AVG(time_to_pickup) AS avg_time
-FROM prepare_time
-GROUP BY pizzas_order_count
-ORDER BY pizzas_order_count;
+SELECT 	ru.order_id,
+	count(co.pizza_id) AS pizzas_count,
+	ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::TIMESTAMP - co.order_time))::DECIMAL/60, 2) AS avg_time,
+	CASE
+	  WHEN COUNT(co.pizza_id) = 1 THEN 'Takes more than 10 minutes to prepare'
+	  WHEN COUNT(co.pizza_id) > 1 THEN 'Preparation time is based on order quantity, approximately or more than 10 minutes per order' END AS relationship
+FROM runner_orders AS ru
+JOIN customer_orders AS co
+ON co.order_id = ru.order_id 
+WHERE ru.pickup_time IS NOT NULL
+GROUP BY ru.order_id, ru.pickup_time, co.order_time
+ORDER BY ru.order_id;
 ```
 
-| pizzas_order_count | avg_time        |
-|--------------------|-----------------|
-| 1                  | 12              |
-| 2                  | -6              |
-| 3                  | 29              |
+|order_id| pizzas_count | avg_time |			relationship		    |
+|--------|--------------|----------|------------------------------------------------|
+|  1	 |	1	|   10.53  |	Takes more than 10 minutes to prepare	    |
+|  2	 |	1	|   10.03  |	Takes more than 10 minutes to prepare	    |
+|  3	 |	2	|   21.23  |	Preparation time is based on order quantity |
+|  4	 |	3	|   29.28  |	Preparation time is based on order quantity |
+|  5	 |	1	|   10.47  |	Takes more than 10 minutes to prepare	    |
+|  7	 |	1	|   10.27  |	Takes more than 10 minutes to prepare	    |
+|  8	 |	1	|   20.48  |	Takes more than 10 minutes to prepare	    |
+|  10	 |	2	|   15.52  |	Preparation time is based on order quantity |
 
 ### **Q4. What was the average distance travelled for each runner?**
 ```SQL
