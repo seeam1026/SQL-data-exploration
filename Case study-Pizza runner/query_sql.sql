@@ -236,33 +236,67 @@ LIMIT 1;
 -- Meat Lovers - Exclude Beef
 -- Meat Lovers - Extra Bacon
 -- Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
-
-
+SELECT *,
+CASE WHEN pizza_id = 1 AND exclusions = '4' AND extras LIKE '%1%' AND extras LIKE '%5%' THEN 'Meat lover - Extra Bacon, Chicken - Exclude Cheese'
+	WHEN pizza_id = 1 AND extras LIKE '%1%' AND extras LIKE '%4%' AND exclusions LIKE '%2%' AND exclusions LIKE '%6%' THEN 'Meat Lover - Exclude BBQ Sauce, Mushrooms - Extra Bacon, Cheese'
+	WHEN exclusions LIKE '%4%' THEN 'Meat Lover - Exclude cheese'
+	WHEN pizza_id = 1 AND extras LIKE'%1%' THEN 'Meat Lover - Extra Bacon'
+    ELSE 'Meat Lover' END
+FROM customer_orders
+WHERE pizza_id = 1;
 	
-Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
-For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
-What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
-
-
 /* --------------------
    Case Study Questions:
    Pricing and Ratings
    --------------------*/
 
+-- If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
+SELECT
+SUM(CASE WHEN co.pizza_id = 1 THEN 12 ELSE 10 END) AS total_revenue
+FROM customer_orders AS co
+JOIN runner_orders AS ru
+  ON ru.order_id = co.order_id
+WHERE ru.cancellation IS NULL;
 
-If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?
-What if there was an additional $1 charge for any pizza extras?
-Add cheese is $1 extra
-The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
-Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
-customer_id
-order_id
-runner_id
-rating
-order_time
-pickup_time
-Time between order and pickup
-Delivery duration
-Average speed
-Total number of pizzas
+-- What if there was an additional $1 charge for any pizza extras?
+-- Add cheese is $1 extra
+-- The Pizza Runner team now wants to add an additional ratings system that allows customers to rate their runner, how would you design an additional table for this new dataset - generate a schema for this new table and insert your own data for ratings for each successful customer order between 1 to 5.
+
+WITH CTE_ex AS (
+  SELECT 
+    order_id, 
+    customer_id, 
+    pizza_id,
+	CASE WHEN exclusions LIKE '%,%' THEN SPLIT_PART(exclusions, ',', 1) ELSE exclusions END AS exlusions_col1, 
+	CASE WHEN exclusions LIKE '%,%' THEN SPLIT_PART(exclusions, ',', 2) END AS exlusions_col2,
+	CASE WHEN extras LIKE '%,%' THEN SPLIT_PART(extras, ',', 1) ELSE extras END AS extras_col1,
+	CASE WHEN extras LIKE '%,%' THEN SPLIT_PART(extras, ',', 2)  END AS extras_col2
+  FROM customer_orders
+  ORDER BY order_id)
+ 
+SELECT
+SUM(CASE WHEN CTE_ex.pizza_id = 1 AND CTE_ex.extras_col1 IS NOT NULL AND CTE_ex.extras_col2 IS NOT NULL THEN 14
+    	WHEN CTE_ex.pizza_id = 1 AND CTE_ex.extras_col1 IS NULL AND CTE_ex.extras_col2 IS NULL THEN 12
+    	WHEN CTE_ex.pizza_id = 1 AND CTE_ex.extras_col1 IS NOT NULL AND CTE_ex.extras_col2 IS NULL THEN 13
+	WHEN CTE_ex.pizza_id = 2 AND CTE_ex.extras_col1 IS NULL AND CTE_ex.extras_col2 IS NULL THEN 10
+    	WHEN CTE_ex.pizza_id = 2 AND CTE_ex.extras_col1 IS NOT NULL AND CTE_ex.extras_col2 IS NOT NULL THEN 12
+    	ELSE 11 END) AS total_revenue2
+FROM runner_orders AS ru  
+JOIN CTE_ex 
+  ON ru.order_id = CTE_ex.order_id
+WHERE ru.pickup_time IS NOT NULL;
+	
+-- Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?
+-- customer_id
+-- order_id
+-- runner_id
+-- rating
+-- order_time
+-- pickup_time
+-- Time between order and pickup
+-- Delivery duration
+-- Average speed
+-- Total number of pizzas
+
+
 If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
