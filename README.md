@@ -303,7 +303,7 @@ Cleaning Data
   ```sql
    UPDATE runner_orders
    SET 	pickup_time = CASE WHEN pickup_time LIKE '%null%' THEN NULL ELSE pickup_time END,
-	distance = CASE WHEN distance LIKE '%null%' THEN NULL ELSE distance END,
+  	distance = CASE WHEN distance LIKE '%null%' THEN NULL ELSE distance END,
   	duration = CASE WHEN duration LIKE '%null%' THEN NULL ELSE duration END,
   	cancellation = CASE WHEN cancellation LIKE '%null%' or cancellation LIKE '%nan%' or cancellation = '' THEN NULL ELSE cancellation END;
 
@@ -311,7 +311,7 @@ Cleaning Data
     SET distance = replace(distance, 'km', ''),
   	duration = trim(regexp_replace(duration, 'minute|mins|min|minutes', ''));
 
-     SELECT * FROM runner_orders;
+    SELECT * FROM runner_orders;
   ```
 
 ## Clean pizza_recipes data:
