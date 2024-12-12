@@ -174,14 +174,71 @@ ORDER BY ru.runner_id;
  
 -- What are the standard ingredients for each pizza?
 
+WITH CTE AS (
+	SELECT pz.pizza_id, STRING_AGG(pt.topping_name, ',') AS standard_ingredients
+	FROM pizza_recipes AS pz
+	JOIN pizza_toppings AS pt 
+	  ON pz.toppings = pt.topping_id
+	GROUP BY pz.pizza_id)
+SELECT pizza_names.pizza_name, CTE.standard_ingredients
+FROM pizza_names
+JOIN CTE
+  ON CTE.pizza_id = pizza_names.pizza_id;
 
-What was the most commonly added extra?
-What was the most common exclusion?
-Generate an order item for each record in the customers_orders table in the format of one of the following:
-Meat Lovers
-Meat Lovers - Exclude Beef
-Meat Lovers - Extra Bacon
-Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+-- What was the most commonly added extra?
+WITH CTE_extras AS (SELECT 
+  DISTINCT extras, 
+  COUNT(order_id) AS total_order
+FROM (
+  SELECT 
+      order_id, 
+      pizza_id, 
+      CAST(UNNEST(string_to_array(extras,',')) AS INT) AS extras
+  FROM customer_orders
+  WHERE extras IS NOT NULL) AS cte
+GROUP BY extras
+ORDER BY total_order DESC)
+	
+SELECT 
+	pizza_toppings.topping_name, 
+	CTE_extras.total_order
+FROM pizza_toppings
+JOIN CTE_extras
+  ON CTE_extras.extras = pizza_toppings.topping_id
+ORDER BY CTE_extras.total_order DESC
+LIMIT 1;
+
+-- What was the most common exclusion?
+WITH CTE_exclusion AS (SELECT 
+  DISTINCT exclusions, 
+  COUNT(order_id) AS total_order
+FROM (
+  SELECT 
+      order_id, 
+      pizza_id, 
+      CAST(UNNEST(string_to_array(exclusions,',')) AS INT) AS exclusions
+  FROM customer_orders
+  WHERE exclusions IS NOT NULL) AS cte
+GROUP BY exclusions
+ORDER BY total_order DESC)
+	
+SELECT 
+	pizza_toppings.topping_name, 
+	CTE_exclusion.total_order
+FROM pizza_toppings
+JOIN CTE_exclusion 
+  ON CTE_exclusion.exclusions = pizza_toppings.topping_id
+ORDER BY CTE_exclusion.total_order DESC
+LIMIT 1;
+
+-- Generate an order item for each record in the customers_orders table in the format of one of the following:
+-- Meat Lovers
+-- Meat Lovers - Exclude Beef
+-- Meat Lovers - Extra Bacon
+-- Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+
+
+	
 Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients
 For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
 What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
