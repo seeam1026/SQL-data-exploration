@@ -298,5 +298,71 @@ WHERE ru.pickup_time IS NOT NULL;
 -- Average speed
 -- Total number of pizzas
 
+WITH final_tab AS (
+  WITH cte3 AS (
+    WITH cte2 AS (
+      SELECT 
+        runner_id, 
+        COUNT(order_id) AS total_orders 
+      FROM runner_orders
+      GROUP BY runner_id)
+    SELECT 
+      cte.runner_id, 
+      cte.success_orders, 
+      cte2.total_orders,
+      ROUND(100.0*cte.success_orders/cte2.total_orders::decimal, 2) AS rating_percent
+    FROM cte2
+    JOIN (
+      SELECT 
+        runner_id, 
+        COUNT(order_id) AS success_orders
+      FROM runner_orders
+      WHERE cancellation IS NULL
+      GROUP BY runner_id) AS cte
+    ON cte.runner_id = cte2.runner_id
+    GROUP BY cte.runner_id, cte.success_orders, cte2.total_orders),
+  cte_time_speed AS (
+    SELECT 
+      cte_time.runner_id, 
+      cte_time.order_id, 
+      cte_time.order_time, 
+      cte_time.pickup_time, 
+      cte_time.time_between, 
+      cte_time.duration, 
+      cte_speed.average_speed_kmh
+    FROM (
+      SELECT 
+        ru.runner_id, 
+        co.order_id, 
+        co.order_time, 
+        ru.pickup_time::timestamp, 
+        ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::timestamp - co.order_time))::decimal/60, 2) AS time_between, 
+        ru.duration
+      FROM customer_orders AS co
+      JOIN runner_orders AS ru
+        ON ru.order_id = co.order_id
+      WHERE ru.pickup_time IS NOT NULL) AS cte_time
+    JOIN (
+      SELECT 
+        runner_id, 
+        ROUND(60*AVG(distance::DECIMAL)/ AVG(duration::INTEGER), 2) AS average_speed_kmh
+      FROM runner_orders 
+      WHERE pickup_time IS NOT NULL 
+      GROUP BY runner_id) AS cte_speed
+    ON cte_speed.runner_id = cte_time.runner_id)
+  SELECT co.customer_id, co.order_id, cte_time_speed.runner_id,  cte_time_speed.order_time, cte_time_speed.pickup_time, cte_time_speed.time_between, cte_time_speed.duration, cte_time_speed.average_speed_kmh, cte3.rating_percent
+  FROM customer_orders AS co
+  LEFT JOIN cte_time_speed ON cte_time_speed.order_id = co.order_id
+  LEFT JOIN cte3 ON cte3.runner_id = cte_time_speed.runner_id),
+  
+cte_total_pizza AS (
+  SELECT customer_id, COUNT(pizza_id) AS total_pizza 
+  FROM customer_orders
+  GROUP BY customer_id)
 
-If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
+SELECT final_tab.*, cte_total_pizza.total_pizza
+FROM final_tab
+JOIN cte_total_pizza
+  ON cte_total_pizza.customer_id = final_tab.customer_id;
+
+-- If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
