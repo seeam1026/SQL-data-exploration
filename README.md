@@ -561,15 +561,15 @@ GROUP BY ru.runner_id;
 
 ### **Q3. Is there any relationship between the number of pizzas and how long the order takes to prepare?**
 ```SQL
-SELECT 	ru.order_id,
-	count(co.pizza_id) AS pizzas_count,
-	ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::TIMESTAMP - co.order_time))::DECIMAL/60, 2) AS avg_time,
-	CASE
-	  WHEN COUNT(co.pizza_id) = 1 THEN 'Takes more than 10 minutes to prepare'
-	  WHEN COUNT(co.pizza_id) > 1 THEN 'Preparation time is based on order quantity, approximately or more than 10 minutes per order' END AS relationship
+SELECT
+  ru.order_id,
+  count(co.pizza_id) AS pizzas_count,
+  ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::TIMESTAMP - co.order_time))::DECIMAL/60, 2) AS avg_time,
+  CASE  WHEN COUNT(co.pizza_id) = 1 THEN 'Takes more than 10 minutes to prepare'
+	WHEN COUNT(co.pizza_id) > 1 THEN 'Preparation time is based on order quantity, approximately or more than 10 minutes per order' END AS relationship
 FROM runner_orders AS ru
 JOIN customer_orders AS co
-ON co.order_id = ru.order_id 
+  ON co.order_id = ru.order_id 
 WHERE ru.pickup_time IS NOT NULL
 GROUP BY ru.order_id, ru.pickup_time, co.order_time
 ORDER BY ru.order_id;
@@ -588,10 +588,9 @@ ORDER BY ru.order_id;
 
 ### **Q4. What was the average distance travelled for each runner?**
 ```SQL
-SELECT
-  runner_id,
-  ROUND(AVG(distance), 2) AS avg_distance
-FROM updated_runner_orders
+SELECT  runner_id,
+	ROUND(AVG(distance::DECIMAL), 2) AS avg_distance
+FROM runner_orders
 GROUP BY runner_id
 ORDER BY runner_id;
 ```
@@ -604,9 +603,8 @@ ORDER BY runner_id;
 
 ### **Q5. What was the difference between the longest and shortest delivery times for all orders?**
 ```SQL
-SELECT
-  MAX(duration) - MIN(duration) AS difference
-FROM updated_runner_orders;
+SELECT MAX(duration::INT) - MIN(duration::INT) AS difference
+FROM runner_orders;
 ```
 
 | difference |
@@ -615,40 +613,31 @@ FROM updated_runner_orders;
 
 ### **Q6. What was the average speed for each runner for each delivery and do you notice any trend for these values?**
 ```SQL
-WITH order_count AS (
-  SELECT
-    order_id,
-    order_time,
-    COUNT(pizza_id) AS pizzas_count
-  FROM updated_customer_orders
-  GROUP BY 
-    order_id, 
-    order_time
-)
-  SELECT
-    ro.order_id,
-    ro.runner_id,
-    co.pizzas_count,
-    ro.distance,
-    ro.duration,
-    ROUND(60 * ro.distance / ro.duration, 2) AS speed
-  FROM updated_runner_orders AS ro
-  INNER JOIN order_count AS co
-    ON ro.order_id = co.order_id
-  WHERE pickup_time IS NOT NULL
-  ORDER BY speed DESC
+SELECT
+  ru.order_id,
+  ru.runner_id,
+  COUNT(co.pizza_id) AS pizza_count,
+  ROUND(AVG(distance::DECIMAL), 1) AS distance,
+  ROUND(AVG(duration::INT), 1) AS duration,
+  ROUND(AVG(ru.distance::DECIMAL/ru.duration::INT)*60, 2) AS speed_kmh
+FROM runner_orders AS ru
+JOIN customer_orders AS co
+  ON ru.order_id = co.order_id
+WHERE ru.cancellation IS NULL
+GROUP BY ru.order_id, ru.runner_id
+ORDER BY speed_kmh DESC;
 ```
 
-| order_id | runner_id | pizzas_count | distance | duration | speed |
-|----------|-----------|--------------|----------|----------|-------|
-| 8        | 2         | 1            | 23.4     | 15       | 93.60 |
-| 7        | 2         | 1            | 25       | 25       | 60.00 |
-| 10       | 1         | 2            | 10       | 10       | 60.00 |
-| 2        | 1         | 1            | 20       | 27       | 44.44 |
-| 3        | 1         | 2            | 13.4     | 20       | 40.20 |
-| 5        | 3         | 1            | 10       | 15       | 40.00 |
-| 1        | 1         | 1            | 20       | 32       | 37.50 |
-| 4        | 2         | 3            | 23.4     | 40       | 35.10 |
+| order_id | runner_id | pizzas_count | distance | duration | speed_kmh |
+|----------|-----------|--------------|----------|----------|-----------|
+| 8        | 2         | 1            | 23.4     | 15       | 93.60 	|
+| 7        | 2         | 1            | 25       | 25       | 60.00 	|
+| 10       | 1         | 2            | 10       | 10       | 60.00 	|
+| 2        | 1         | 1            | 20       | 27       | 44.44 	|
+| 3        | 1         | 2            | 13.4     | 20       | 40.20 	|
+| 5        | 3         | 1            | 10       | 15       | 40.00 	|
+| 1        | 1         | 1            | 20       | 32       | 37.50 	|
+| 4        | 2         | 3            | 23.4     | 40       | 35.10 	|
 
 **Finding:**
 - **Orders shown in decreasing order of average speed:**
