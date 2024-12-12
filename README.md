@@ -292,7 +292,7 @@ Cleaning Data
 ```sql
 	UPDATE customer_orders
 	SET exclusions = CASE WHEN exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' THEN NULL ELSE exclusions END,
-	extras = CASE WHEN extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' THEN NULL ELSE extras END;
+	    extras = CASE WHEN extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' THEN NULL ELSE extras END;
 ```
 ## Clean runner_orders data:
 **```runner_orders```**
