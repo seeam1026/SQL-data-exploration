@@ -314,10 +314,10 @@ Cleaning Data
   	SELECT * FROM runner_orders;
   ```
 
-  ## Clean pizza_recipes data:
-  **```pizza_recipes```**
+## Clean pizza_recipes data:
+**```pizza_recipes```**
 
-  ```sql
+```sql
 	CREATE TEMP TABLE temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
 	INSERT INTO temp_pizza_recipe(pizza_id, pizza_topping)
 	SELECT pizza_id, unnest(string_to_array(toppings, ',')) 
@@ -332,7 +332,7 @@ Cleaning Data
 	ALTER TABLE pizza_recipes 
 	ALTER COLUMN toppings TYPE INT
 	USING toppings::INT;
-  ```
+```
 	
 </details>
 
