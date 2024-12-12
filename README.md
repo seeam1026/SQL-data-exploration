@@ -301,37 +301,37 @@ Cleaning Data
 - Extracting only numbers and decimal spaces for the distance and duration columns
 - Converting blanks, ```'null'``` and ```NaN``` into null values for cancellation 
   ```sql
-  	UPDATE runner_orders
-  	SET pickup_time = CASE WHEN pickup_time LIKE '%null%' THEN NULL ELSE pickup_time END,
-  	distance = CASE WHEN distance LIKE '%null%' THEN NULL ELSE distance END,
+   UPDATE runner_orders
+   SET 	pickup_time = CASE WHEN pickup_time LIKE '%null%' THEN NULL ELSE pickup_time END,
+	distance = CASE WHEN distance LIKE '%null%' THEN NULL ELSE distance END,
   	duration = CASE WHEN duration LIKE '%null%' THEN NULL ELSE duration END,
   	cancellation = CASE WHEN cancellation LIKE '%null%' or cancellation LIKE '%nan%' or cancellation = '' THEN NULL ELSE cancellation END;
 
-  	UPDATE runner_orders
-  	SET distance = replace(distance, 'km', ''),
+    UPDATE runner_orders
+    SET distance = replace(distance, 'km', ''),
   	duration = trim(regexp_replace(duration, 'minute|mins|min|minutes', ''));
 
-  	SELECT * FROM runner_orders;
+     SELECT * FROM runner_orders;
   ```
 
 ## Clean pizza_recipes data:
 **```pizza_recipes```**
 
 ```sql
-	CREATE TEMP TABLE temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
-	INSERT INTO temp_pizza_recipe(pizza_id, pizza_topping)
-	SELECT pizza_id, unnest(string_to_array(toppings, ',')) 
-	FROM pizza_recipes;
-	TRUNCATE TABLE pizza_recipes;
-	INSERT INTO pizza_recipes(pizza_id, toppings)
-	SELECT pizza_id, pizza_topping FROM temp_pizza_recipe;
-	SELECT * FROM pizza_recipes;
+   CREATE TEMP TABLE temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
+   INSERT INTO temp_pizza_recipe(pizza_id, pizza_topping)
+   SELECT pizza_id, unnest(string_to_array(toppings, ',')) 
+   FROM pizza_recipes;
+   TRUNCATE TABLE pizza_recipes;
+   INSERT INTO pizza_recipes(pizza_id, toppings)
+   SELECT pizza_id, pizza_topping FROM temp_pizza_recipe;
+   SELECT * FROM pizza_recipes;
 	
-	DROP TABLE IF EXISTS temp_pizza_recipe;
+   DROP TABLE IF EXISTS temp_pizza_recipe;
 	
-	ALTER TABLE pizza_recipes 
-	ALTER COLUMN toppings TYPE INT
-	USING toppings::INT;
+   ALTER TABLE pizza_recipes 
+   ALTER COLUMN toppings TYPE INT
+   USING toppings::INT;
 ```
 	
 </details>
