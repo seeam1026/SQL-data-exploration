@@ -646,20 +646,26 @@ ORDER BY speed_kmh DESC;
 ### **Q7. What is the successful delivery percentage for each runner?**
 ```sql
 SELECT
-  runner_id,
-  COUNT(pickup_time) as delivered,
-  COUNT(order_id) AS total,
-  ROUND(100 * COUNT(pickup_time) / COUNT(order_id)) AS delivery_percent
-FROM updated_runner_orders
-GROUP BY runner_id
-ORDER BY runner_id;
+  ru.runner_id,
+  ROUND(100.0*cte.successful_order/COUNT(ru.order_id)) AS delivery_percent
+FROM runner_orders AS ru
+JOIN (
+    SELECT
+	runner_id,
+	COUNT(order_id) AS successful_order
+    FROM runner_orders
+    WHERE pickup_time IS NOT NULL
+    GROUP BY runner_id) AS cte
+ ON cte.runner_id = ru.runner_id
+GROUP BY ru.runner_id, cte.successful_order
+ORDER BY ru.runner_id;
 ```
 
-| runner_id | delivered | total | delivery_percent |
-|-----------|-----------|-------|------------------|
-| 1         | 4         | 4     | 100              |
-| 2         | 3         | 4     | 75               |
-| 3         | 1         | 2     | 50               |
+| runner_id | delivery_percent |
+|-----------|------------------|
+| 1         | 100              |
+| 2         | 75               |
+| 3         | 50               |
 
 
 </details>
