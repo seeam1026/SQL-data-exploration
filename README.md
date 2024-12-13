@@ -1,4 +1,4 @@
-[![View My Profile](https://img.shields.io/badge/View-My_Profile-green?logo=GitHub)]()
+[![View My Profile](https://img.shields.io/badge/View-My_Profile-blue?logo=GitHub)](https://github.com/seeam1026)
 
 # [8-Week SQL Challenge](https://8weeksqlchallenge.com)
 
