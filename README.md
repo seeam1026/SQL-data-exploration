@@ -9,7 +9,7 @@ A big shoutout to Data with Danny for creating these incredible and inspiring SQ
 ## 📖 Table of Contents
 
 - [Case Study #1: Danny's Diner] ()
-- [Case Study #2: Pizza Runner] ()
+- [Case Study #2: Pizza Runner] (https://github.com/seeam1026/SQL-data-exploration/blob/main/Case%20study-Pizza%20runner/README.md)
 
 ## ✨ Contribution
 Contributions, feedback, and suggestions are always welcome!
