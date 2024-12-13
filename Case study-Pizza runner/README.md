@@ -640,8 +640,9 @@ ORDER BY speed_kmh DESC;
 | 4        | 2         | 3            | 23.4     | 40       | 35.10 	|
 
 **Finding:**
-- **Orders shown in decreasing order of average speed:**
-> *While the fastest order only carried 1 pizza and the slowest order carried 3 pizzas, there is no clear trend that more pizzas slow down the delivery speed of an order.*  
+- **Orders are listed in decreasing order of average speed:**
+> *Although the fastest order delivered only 1 pizza and the slowest order delivered 3 pizzas, there is no clear trend indicating that more pizzas in an order result in slower delivery speeds.*
+
 
 ### **Q7. What is the successful delivery percentage for each runner?**
 ```sql
