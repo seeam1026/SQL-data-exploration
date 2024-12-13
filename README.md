@@ -1,3 +1,5 @@
+[![View My Profile](https://img.shields.io/badge/View-My_Profile-green?logo=GitHub)]()
+
 # [8-Week SQL Challenge](https://8weeksqlchallenge.com)
 
 Welcome to my repository, where I share my solutions for the #8WeekSQLChallenge!
