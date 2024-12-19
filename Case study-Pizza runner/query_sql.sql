@@ -298,30 +298,78 @@ WHERE ru.pickup_time IS NOT NULL;
 -- Average speed
 -- Total number of pizzas
 
-WITH final_tab AS (
-  WITH cte3 AS (
-    WITH cte2 AS (
-      SELECT 
-        runner_id, 
-        COUNT(order_id) AS total_orders 
-      FROM runner_orders
-      GROUP BY runner_id)
+	UPDATE customer_orders
+	SET exclusions = CASE WHEN exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' THEN NULL ELSE exclusions END,
+	    extras = CASE WHEN extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' THEN NULL ELSE extras END;
+         UPDATE runner_orders
+ SET 	pickup_time = CASE WHEN pickup_time LIKE '%null%' THEN NULL ELSE pickup_time END,
+	distance = CASE WHEN distance LIKE '%null%' THEN NULL ELSE distance END,
+	duration = CASE WHEN duration LIKE '%null%' THEN NULL ELSE duration END,
+	cancellation = CASE WHEN cancellation LIKE '%null%' or cancellation LIKE '%nan%' or cancellation = '' THEN NULL ELSE cancellation END;
+
+  UPDATE runner_orders
+  SET	distance = replace(distance, 'km', ''),
+	duration = trim(regexp_replace(duration, 'minute|mins|min|minutes', ''));
+
+  -- SELECT * FROM runner_orders;
+  
+     CREATE TEMP TABLE temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
+   INSERT INTO temp_pizza_recipe(pizza_id, pizza_topping)
+   SELECT pizza_id, unnest(string_to_array(toppings, ',')) 
+   FROM pizza_recipes;
+   TRUNCATE TABLE pizza_recipes;
+   INSERT INTO pizza_recipes(pizza_id, toppings)
+   SELECT pizza_id, pizza_topping FROM temp_pizza_recipe;
+   -- SELECT * FROM pizza_recipes;
 	
+   DROP TABLE IF EXISTS temp_pizza_recipe;
+	
+   ALTER TABLE pizza_recipes 
+   ALTER COLUMN toppings TYPE INT
+   USING toppings::INT;
+   
+
+WITH orders_per_runner AS (
+  SELECT runner_id, COUNT(order_id) AS total_orders 
+  FROM runner_orders
+  GROUP BY runner_id),
+  
+  successful_rate AS (
+  SELECT 
+  	cte_num_of_success.runner_id, 
+  	cte_num_of_success.success_orders, 
+  	orders_per_runner.total_orders,
+  	ROUND(100.0*cte_num_of_success.success_orders/orders_per_runner.total_orders::decimal, 2) AS rating_percent
+  FROM orders_per_runner
+  JOIN (
+    SELECT runner_id, COUNT(order_id) AS success_orders
+    FROM runner_orders
+    WHERE cancellation IS NULL
+    GROUP BY runner_id) AS cte_num_of_success
+  ON cte_num_of_success.runner_id = orders_per_runner.runner_id
+  GROUP BY cte_num_of_success.runner_id, cte_num_of_success.success_orders, orders_per_runner.total_orders),
+  
+  cte_time AS (
     SELECT 
-      cte.runner_id, 
-      cte.success_orders, 
-      cte2.total_orders,
-      ROUND(100.0*cte.success_orders/cte2.total_orders::decimal, 2) AS rating_percent
-    FROM cte2
-    JOIN (
+        ru.runner_id, 
+        co.order_id, 
+        co.order_time, 
+        ru.pickup_time::timestamp, 
+        ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::timestamp - co.order_time))::decimal/60, 2) AS time_between, 
+        ru.duration
+    FROM customer_orders AS co
+    JOIN runner_orders AS ru
+    ON ru.order_id = co.order_id
+    WHERE ru.pickup_time IS NOT NULL),
+    
+  cte_speed AS (
       SELECT 
         runner_id, 
-        COUNT(order_id) AS success_orders
-      FROM runner_orders
-      WHERE cancellation IS NULL
-      GROUP BY runner_id) AS cte
-    ON cte.runner_id = cte2.runner_id
-    GROUP BY cte.runner_id, cte.success_orders, cte2.total_orders),
+        ROUND(60*AVG(distance::DECIMAL)/ AVG(duration::INTEGER), 2) AS average_speed_kmh
+      FROM runner_orders 
+      WHERE pickup_time IS NOT NULL 
+      GROUP BY runner_id),
+  
   cte_time_speed AS (
     SELECT 
       cte_time.runner_id, 
@@ -331,40 +379,25 @@ WITH final_tab AS (
       cte_time.time_between, 
       cte_time.duration, 
       cte_speed.average_speed_kmh
-    FROM (
-      SELECT 
-        ru.runner_id, 
-        co.order_id, 
-        co.order_time, 
-        ru.pickup_time::timestamp, 
-        ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::timestamp - co.order_time))::decimal/60, 2) AS time_between, 
-        ru.duration
-      FROM customer_orders AS co
-      JOIN runner_orders AS ru
-        ON ru.order_id = co.order_id
-      WHERE ru.pickup_time IS NOT NULL) AS cte_time
-    JOIN (
-      SELECT 
-        runner_id, 
-        ROUND(60*AVG(distance::DECIMAL)/ AVG(duration::INTEGER), 2) AS average_speed_kmh
-      FROM runner_orders 
-      WHERE pickup_time IS NOT NULL 
-      GROUP BY runner_id) AS cte_speed
-    ON cte_speed.runner_id = cte_time.runner_id)
-  SELECT co.customer_id, co.order_id, cte_time_speed.runner_id,  cte_time_speed.order_time, cte_time_speed.pickup_time, cte_time_speed.time_between, cte_time_speed.duration, cte_time_speed.average_speed_kmh, cte3.rating_percent
-  FROM customer_orders AS co
-  LEFT JOIN cte_time_speed ON cte_time_speed.order_id = co.order_id
-  LEFT JOIN cte3 ON cte3.runner_id = cte_time_speed.runner_id),
+    FROM cte_time
+    JOIN cte_speed
+    ON cte_speed.runner_id = cte_time.runner_id),
   
-cte_total_pizza AS (
-  SELECT customer_id, COUNT(pizza_id) AS total_pizza 
-  FROM customer_orders
-  GROUP BY customer_id)
-
-SELECT final_tab.*, cte_total_pizza.total_pizza
-FROM final_tab
+  cte_total_pizza AS (
+    SELECT customer_id, COUNT(pizza_id) AS total_pizza 
+    FROM customer_orders
+    GROUP BY customer_id),
+  
+  info_successful_diliveries AS (
+    SELECT co.customer_id, co.order_id, cte_time_speed.runner_id,  cte_time_speed.order_time, cte_time_speed.pickup_time, cte_time_speed.time_between, cte_time_speed.duration, cte_time_speed.average_speed_kmh, successful_rate.rating_percent
+    FROM customer_orders AS co
+    LEFT JOIN cte_time_speed ON cte_time_speed.order_id = co.order_id
+    LEFT JOIN successful_rate ON successful_rate.runner_id = cte_time_speed.runner_id)
+    
+SELECT info_successful_diliveries.*, cte_total_pizza.total_pizza
+FROM info_successful_diliveries
 JOIN cte_total_pizza
-  ON cte_total_pizza.customer_id = final_tab.customer_id;
+ON cte_total_pizza.customer_id = info_successful_diliveries.customer_id;
 
 -- If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
 
