@@ -109,79 +109,38 @@ VALUES
 
 -- CLEANING DATA
 -- 1. Clean table customer_orders
-SELECT * FROM customer_orders
-WHERE exclusions LIKE '%null%' OR exclusions LIKE '%nan' OR exclusions = '';
-
 UPDATE customer_orders
-SET exclusions = 
-	(CASE WHEN exclusions LIKE '%null%' 
-	 		OR exclusions LIKE '%nan' 
-	 		OR exclusions = '' THEN NULL ELSE exclusions END
-	);
-
-UPDATE customer_orders
-SET extras = CASE WHEN extras = '' OR extras LIKE '%null%' THEN NULL ELSE extras END;
+SET exclusions = CASE WHEN exclusions = '' or exclusions LIKE '%null%' or exclusions LIKE '%nan%' THEN NULL ELSE exclusions END,
+	extras = CASE WHEN extras = '' or extras LIKE '%null%' or extras LIKE '%nan%' THEN NULL ELSE extras END;
 
 -- 2. Clean table runner_orders
-UPDATE runner_orders
-SET pickup_time = CASE WHEN pickup_time LIKE '%null%' THEN NULL ELSE pickup_time END,
+ UPDATE runner_orders
+ SET 	pickup_time = CASE WHEN pickup_time LIKE '%null%' THEN NULL ELSE pickup_time END,
 	distance = CASE WHEN distance LIKE '%null%' THEN NULL ELSE distance END,
 	duration = CASE WHEN duration LIKE '%null%' THEN NULL ELSE duration END,
-	cancellation = CASE WHEN cancellation LIKE '%null%' OR cancellation = '' THEN NULL ELSE cancellation END
-;
+	cancellation = CASE WHEN cancellation LIKE '%null%' or cancellation LIKE '%nan%' or cancellation = '' THEN NULL ELSE cancellation END;
 
-SELECT * FROM runner_orders;
-UPDATE runner_orders
-SET distance = replace(distance, 'km', '');
+  UPDATE runner_orders
+  SET	distance = replace(distance, 'km', ''),
+	duration = trim(regexp_replace(duration, 'minute|mins|min|minutes', ''));
 
--- Change data type of column distance
-ALTER TABLE runner_orders
-ALTER COLUMN distance TYPE DECIMAL(3, 1)
-USING distance::DECIMAL(3, 1);
-
--- Just take the number for easier query so I delete anything that is not number
--- And change data type of column duration
-UPDATE runner_orders
-SET duration = TRIM(regexp_replace(duration, 'minutes|mins|minute', ''));
-
-ALTER TABLE runner_orders
-ALTER COLUMN duration TYPE INT
-USING duration::INT;
-
-ALTER TABLE runner_orders
-RENAME COLUMN distance TO distance_km;
-
-ALTER TABLE runner_orders
-RENAME COLUMN duration TO duration_mins;
-
--- SELECT * FROM runner_orders;
-
+  SELECT * FROM runner_orders;
 
 -- 3. Clean table pizza_recipes
--- SELECT * FROM pizza_recipes;
--- The toppings column is comma-separated so I want to explode it to row by row
-CREATE TEMP TABLE temp_pizza_recipes (
-	pizza_id INT,
-	topping_id TEXT
-);
 
-INSERT INTO temp_pizza_recipes (pizza_id, topping_id)
-SELECT 
-    pizza_id,
-    unnest(string_to_array(toppings, ',')::INT[])
-FROM pizza_recipes;
+   CREATE TEMP TABLE temp_pizza_recipe(pizza_id INT, pizza_topping TEXT);
+   INSERT INTO temp_pizza_recipe(pizza_id, pizza_topping)
+   SELECT pizza_id, unnest(string_to_array(toppings, ',')) 
+   FROM pizza_recipes;
 
--- Delete all data of table pizza_recipes
-TRUNCATE TABLE pizza_recipes;
+   TRUNCATE TABLE pizza_recipes;
+   INSERT INTO pizza_recipes(pizza_id, toppings)
+   SELECT pizza_id, pizza_topping FROM temp_pizza_recipe;
 
--- Insert data into table pizza_recipes
-INSERT INTO pizza_recipes (pizza_id, toppings)
-SELECT pizza_id, topping_id FROM temp_pizza_recipes;
+   -- SELECT * FROM pizza_recipes;
+	
+   DROP TABLE IF EXISTS temp_pizza_recipe;
 
-DROP TABLE IF EXISTS temp_pizza_recipes;
-
--- Change data type
-ALTER TABLE pizza_recipes
-ALTER COLUMN toppings TYPE INT
-USING toppings::INT;
--- SELECT * FROM pizza_recipes;
+   ALTER TABLE pizza_recipes 
+   ALTER COLUMN toppings TYPE INT
+   USING toppings::INT;
