@@ -158,7 +158,7 @@ This table contains all of the **```topping_name```** values with their correspo
 
 </details>
 
-## ♻️Data Cleaning
+## ♻️ Data Cleaning
 <details>
 <summary>
 Create table
