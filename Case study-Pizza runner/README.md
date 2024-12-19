@@ -3,14 +3,14 @@
 <img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/IMG/org-2.png" width=40% height=40%>
 
 ## 📕 Table Of Contents
-  - 🛠️ [Problem Statement](#-problem-statement)
+  - 🛠️ [Problem Statement](#problem-statement)
   - 📂 [Dataset](#-dataset)
-  - ♻️ [Data Cleaning](#-data-cleaning)
+  - ♻️ [Data Cleaning](#data-cleaning)
   - 🔍 [Data Exploration](#data-exploration)
 
 ---
 
-## 🛠️Problem Statement
+## Problem Statement
 
 > Danny was scrolling through his Instagram feed when something really caught his eye - “80s Retro Styling and Pizza Is The Future!”
 > 
@@ -158,7 +158,7 @@ This table contains all of the **```topping_name```** values with their correspo
 
 </details>
 
-## ♻️Data Cleaning
+## Data Cleaning
 <details>
 <summary>
 Create table
