@@ -673,3 +673,192 @@ ORDER BY ru.runner_id;
 
 
 </details>
+
+<details>
+	<summary>
+		Ingredient Optimisation
+	</summary>
+	
+ ### **Q1. What are the standard ingredients for each pizza?**
+ ```SQL
+    WITH CTE AS (
+      SELECT pz.pizza_id, STRING_AGG(pt.topping_name, ',') AS standard_ingredients
+      FROM pizza_recipes AS pz
+      JOIN pizza_toppings AS pt 
+      ON pz.toppings = pt.topping_id
+      GROUP BY pz.pizza_id)
+      
+    SELECT pizza_names.pizza_name, CTE.standard_ingredients
+    FROM pizza_names
+    JOIN CTE
+    ON CTE.pizza_id = pizza_names.pizza_id;
+```
+>Output
+
+| pizza_name | standard_ingredients                                           |
+| ---------- | -------------------------------------------------------------- |
+| Meatlovers | Bacon,BBQ Sauce,Beef,Cheese,Chicken,Mushrooms,Pepperoni,Salami |
+| Vegetarian | Cheese,Mushrooms,Onions,Peppers,Tomatoes,Tomato Sauce          |
+
+### **Q2. What was the most commonly added extra?**
+```SQL
+    WITH CTE_extras AS (
+      SELECT DISTINCT extras, COUNT(order_id) AS total_order
+      FROM (
+      	SELECT order_id, pizza_id, CAST(UNNEST(string_to_array(extras,',')) AS INT) AS extras
+      	FROM customer_orders
+      	WHERE extras IS NOT NULL) AS cte
+      GROUP BY extras
+      ORDER BY total_order DESC)
+    	
+    SELECT 
+    	pizza_toppings.topping_name, 
+    	CTE_extras.total_order
+    FROM pizza_toppings
+    JOIN CTE_extras
+    ON CTE_extras.extras = pizza_toppings.topping_id
+    ORDER BY CTE_extras.total_order DESC
+    LIMIT 1;
+```
+>Output
+
+| topping_name | total_order |
+| ------------ | ----------- |
+| Bacon        | 4           |
+
+### **Q3. What was the most common exclusion?**
+```SQL
+    WITH CTE_exclusion AS (
+      SELECT DISTINCT exclusions, COUNT(order_id) AS total_order
+      FROM (
+      	SELECT order_id, pizza_id, CAST(UNNEST(string_to_array(exclusions,',')) AS INT) AS exclusions
+        FROM customer_orders
+        WHERE exclusions IS NOT NULL) AS cte
+      GROUP BY exclusions
+      ORDER BY total_order DESC)
+    	
+    SELECT 
+    	pizza_toppings.topping_name, 
+    	CTE_exclusion.total_order
+    FROM pizza_toppings
+    JOIN CTE_exclusion 
+    ON CTE_exclusion.exclusions = pizza_toppings.topping_id
+    ORDER BY CTE_exclusion.total_order DESC
+    LIMIT 1;
+```
+>Output
+
+| topping_name | total_order |
+| ------------ | ----------- |
+| Cheese       | 4           |
+
+### **Q4. Generate an order item for each record in the customers_orders table in the format of one of the following:
+* Meat Lovers
+* Meat Lovers - Exclude Beef
+* Meat Lovers - Extra Bacon
+* Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
+```SQL
+    SELECT order_id, customer_id,
+    CASE WHEN pizza_id = 1 AND exclusions = '4' AND extras LIKE '%1%' AND extras LIKE '%5%' THEN 'Meat lover - Extra Bacon, Chicken - Exclude Cheese'
+    	WHEN pizza_id = 1 AND extras LIKE '%1%' AND extras LIKE '%4%' AND exclusions LIKE '%2%' AND exclusions LIKE '%6%' THEN 'Meat Lover - Exclude BBQ Sauce, Mushrooms - Extra Bacon, Cheese'
+    	WHEN exclusions LIKE '%4%' THEN 'Meat Lover - Exclude cheese'
+    	WHEN pizza_id = 1 AND extras LIKE'%1%' THEN 'Meat Lover - Extra Bacon'
+        ELSE 'Meat Lover' END
+    FROM customer_orders
+    WHERE pizza_id = 1;
+
+```
+>Output
+
+| order_id | customer_id | case                                                            |
+| -------- | ----------- | --------------------------------------------------------------- |
+| 1        | 101         | Meat Lover                                                      |
+| 2        | 101         | Meat Lover                                                      |
+| 3        | 102         | Meat Lover                                                      |
+| 4        | 103         | Meat Lover - Exclude cheese                                     |
+| 4        | 103         | Meat Lover - Exclude cheese                                     |
+| 5        | 104         | Meat Lover - Extra Bacon                                        |
+| 8        | 102         | Meat Lover                                                      |
+| 9        | 103         | Meat lover - Extra Bacon, Chicken - Exclude Cheese              |
+| 10       | 104         | Meat Lover                                                      |
+| 10       | 104         | Meat Lover - Exclude BBQ Sauce, Mushrooms - Extra Bacon, Cheese |
+
+### **Q5. Generate an alphabetically ordered comma separated ingredient list for each pizza order from the customer_orders table and add a 2x in front of any relevant ingredients**
+* For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
+
+
+### **Q6. What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?**
+</details>
+
+<details>
+	<summary>
+		Pricing and Ratings
+	</summary>
+	
+### **Q1. If a Meat Lovers pizza costs $12 and Vegetarian costs $10 and there were no charges for changes - how much money has Pizza Runner made so far if there are no delivery fees?**
+```SQL
+    SELECT
+    SUM(CASE WHEN co.pizza_id = 1 THEN 12 ELSE 10 END) AS total_revenue
+    FROM customer_orders AS co
+    JOIN runner_orders AS ru
+    ON ru.order_id = co.order_id
+    WHERE ru.cancellation IS NULL;
+```
+>Output
+
+| total_revenue |
+| ------------- |
+| 138           |
+
+### **Q2. What if there was an additional $1 charge for any pizza extras?**
+* Add cheese is $1 extra
+```SQL
+    WITH CTE_ex AS (
+      SELECT 
+        order_id, 
+        customer_id, 
+        pizza_id,
+    	CASE WHEN exclusions LIKE '%,%' THEN SPLIT_PART(exclusions, ',', 1) ELSE exclusions END AS exlusions_col1, 
+    	CASE WHEN exclusions LIKE '%,%' THEN SPLIT_PART(exclusions, ',', 2) END AS exlusions_col2,
+    	CASE WHEN extras LIKE '%,%' THEN SPLIT_PART(extras, ',', 1) ELSE extras END AS extras_col1,
+    	CASE WHEN extras LIKE '%,%' THEN SPLIT_PART(extras, ',', 2)  END AS extras_col2
+      FROM customer_orders
+      ORDER BY order_id)
+     
+    SELECT
+    SUM(CASE WHEN CTE_ex.pizza_id = 1 AND CTE_ex.extras_col1 IS NOT NULL AND CTE_ex.extras_col2 IS NOT NULL THEN 14
+        	WHEN CTE_ex.pizza_id = 1 AND CTE_ex.extras_col1 IS NULL AND CTE_ex.extras_col2 IS NULL THEN 12
+        	WHEN CTE_ex.pizza_id = 1 AND CTE_ex.extras_col1 IS NOT NULL AND CTE_ex.extras_col2 IS NULL THEN 13
+    	WHEN CTE_ex.pizza_id = 2 AND CTE_ex.extras_col1 IS NULL AND CTE_ex.extras_col2 IS NULL THEN 10
+        	WHEN CTE_ex.pizza_id = 2 AND CTE_ex.extras_col1 IS NOT NULL AND CTE_ex.extras_col2 IS NOT NULL THEN 12
+        	ELSE 11 END) AS total_revenue
+    FROM runner_orders AS ru  
+    JOIN CTE_ex 
+    ON ru.order_id = CTE_ex.order_id
+    WHERE ru.pickup_time IS NOT NULL;
+
+```
+>Output
+
+| total_revenue |
+| ------------- |
+| 142           |
+
+### **Q3. Using your newly generated table - can you join all of the information together to form a table which has the following information for successful deliveries?**
+* customer_id
+* order_id
+* runner_id
+* rating
+* order_time
+* pickup_time
+* Time between order and pickup
+* Delivery duration
+* Average speed
+* Total number of pizzas
+
+```SQL
+```
+### **Q4. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?**
+```SQL
+```
+</details>
