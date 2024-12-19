@@ -6,7 +6,7 @@
   - 🛠️ [Problem Statement](#problem-statement)
   - 📂 [Dataset](#-dataset)
   - ♻️ [Data Cleaning](#data-cleaning)
-  - 🔍 [Data Exploration](#data-exploration)
+  - 🔍 [Data Exploration](#-data-exploration)
 
 ---
 
