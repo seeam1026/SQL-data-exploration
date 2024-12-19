@@ -21,6 +21,9 @@
 ---
 
 ## 📂 Dataset
+<p align="center">
+<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/Case%20study-Pizza%20runner/pizza-project.png">
+
 Danny has shared with you 6 key datasets for this case study:
 
 ### **```runners```**
