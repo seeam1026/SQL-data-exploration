@@ -10,7 +10,7 @@
 
 ---
 
-## Problem Statement
+## 🛠Problem Statement
 
 > Danny was scrolling through his Instagram feed when something really caught his eye - “80s Retro Styling and Pizza Is The Future!”
 > 
@@ -158,7 +158,7 @@ This table contains all of the **```topping_name```** values with their correspo
 
 </details>
 
-## Data Cleaning
+## ♻Data Cleaning
 <details>
 <summary>
 Create table
