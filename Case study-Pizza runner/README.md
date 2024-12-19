@@ -857,7 +857,106 @@ ORDER BY ru.runner_id;
 * Total number of pizzas
 
 ```SQL
+    WITH orders_per_runner AS (
+      SELECT runner_id, COUNT(order_id) AS total_orders 
+      FROM runner_orders
+      GROUP BY runner_id),
+      
+      successful_rate AS (
+      SELECT 
+      	cte_num_of_success.runner_id, 
+      	cte_num_of_success.success_orders, 
+      	orders_per_runner.total_orders,
+      	ROUND(100.0*cte_num_of_success.success_orders/orders_per_runner.total_orders::decimal, 2) AS rating
+      FROM orders_per_runner
+      JOIN (
+        SELECT runner_id, COUNT(order_id) AS success_orders
+        FROM runner_orders
+        WHERE cancellation IS NULL
+        GROUP BY runner_id) AS cte_num_of_success
+      ON cte_num_of_success.runner_id = orders_per_runner.runner_id
+      GROUP BY cte_num_of_success.runner_id, cte_num_of_success.success_orders, orders_per_runner.total_orders),
+      
+      cte_time AS (
+        SELECT 
+            ru.runner_id, 
+            co.order_id, 
+            co.order_time, 
+            ru.pickup_time::timestamp, 
+            ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::timestamp - co.order_time))::decimal/60, 2) AS time_between, 
+            ru.duration
+        FROM customer_orders AS co
+        JOIN runner_orders AS ru
+        ON ru.order_id = co.order_id
+        WHERE ru.pickup_time IS NOT NULL),
+        
+      cte_speed AS (
+          SELECT 
+            runner_id, 
+            ROUND(60*AVG(distance::DECIMAL)/ AVG(duration::INTEGER), 2) AS avg_speed
+          FROM runner_orders 
+          WHERE pickup_time IS NOT NULL 
+          GROUP BY runner_id),
+      
+      cte_time_speed AS (
+        SELECT 
+          cte_time.runner_id, 
+          cte_time.order_id, 
+          cte_time.order_time, 
+          cte_time.pickup_time, 
+          cte_time.time_between, 
+          cte_time.duration, 
+          cte_speed.avg_speed
+        FROM cte_time
+        JOIN cte_speed
+        ON cte_speed.runner_id = cte_time.runner_id),
+      
+      cte_total_pizza AS (
+        SELECT customer_id, COUNT(pizza_id) AS total_pizza 
+        FROM customer_orders
+        GROUP BY customer_id),
+      
+      info_successful_diliveries AS (
+        SELECT co.customer_id, co.order_id, cte_time_speed.runner_id,  TO_CHAR(cte_time_speed.order_time, 'HH24:MI:SS') AS order_time, TO_CHAR(cte_time_speed.pickup_time, 'HH24:MI:SS') AS pickup_time, cte_time_speed.time_between, cte_time_speed.duration, cte_time_speed.avg_speed, successful_rate.rating
+        FROM customer_orders AS co
+        LEFT JOIN cte_time_speed ON cte_time_speed.order_id = co.order_id
+        LEFT JOIN successful_rate ON successful_rate.runner_id = cte_time_speed.runner_id)
+        
+    SELECT info_successful_diliveries.*, cte_total_pizza.total_pizza
+    FROM info_successful_diliveries
+    JOIN cte_total_pizza
+    ON cte_total_pizza.customer_id = info_successful_diliveries.customer_id;
 ```
+>Output
+
+| customer_id | order_id | runner_id | order_time | pickup_time | time_between | duration | avg_speed | rating | total_pizza |
+| ----------- | -------- | --------- | ---------- | ----------- | ------------ | -------- | --------- | ------ | ----------- |
+| 101         | 1        | 1         | 18:05:02   | 18:15:34    | 10.53        | 32       | 42.74     | 100.00 | 3           |
+| 101         | 2        | 1         | 19:00:52   | 19:10:54    | 10.03        | 27       | 42.74     | 100.00 | 3           |
+| 102         | 3        | 1         | 23:51:23   | 00:12:37    | 21.23        | 20       | 42.74     | 100.00 | 3           |
+| 102         | 3        | 1         | 23:51:23   | 00:12:37    | 21.23        | 20       | 42.74     | 100.00 | 3           |
+| 102         | 3        | 1         | 23:51:23   | 00:12:37    | 21.23        | 20       | 42.74     | 100.00 | 3           |
+| 102         | 3        | 1         | 23:51:23   | 00:12:37    | 21.23        | 20       | 42.74     | 100.00 | 3           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 103         | 4        | 2         | 13:23:46   | 13:53:03    | 29.28        | 40       | 53.85     | 75.00  | 4           |
+| 104         | 5        | 3         | 21:00:29   | 21:10:57    | 10.47        | 15       | 40.00     | 50.00  | 3           |
+| 101         | 6        |           |            |             |              |          |           |        | 3           |
+| 105         | 7        | 2         | 21:20:29   | 21:30:45    | 10.27        | 25       | 53.85     | 75.00  | 1           |
+| 102         | 8        | 2         | 23:54:33   | 00:15:02    | 20.48        | 15       | 53.85     | 75.00  | 3           |
+| 103         | 9        |           |            |             |              |          |           |        | 4           |
+| 104         | 10       | 1         | 18:34:49   | 18:50:20    | 15.52        | 10       | 42.74     | 100.00 | 3           |
+| 104         | 10       | 1         | 18:34:49   | 18:50:20    | 15.52        | 10       | 42.74     | 100.00 | 3           |
+| 104         | 10       | 1         | 18:34:49   | 18:50:20    | 15.52        | 10       | 42.74     | 100.00 | 3           |
+| 104         | 10       | 1         | 18:34:49   | 18:50:20    | 15.52        | 10       | 42.74     | 100.00 | 3           |
+
+
 ### **Q4. If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?**
 ```SQL
 ```
