@@ -159,7 +159,9 @@ SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
 ### **Q4. How many days on average are customers reallocated to a different node?**
 ```SQL
     WITH CTE AS (
-      SELECT customer_id, node_id, start_date, end_date, LEAD(node_id) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_node_id, LEAD(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_start_date
+      SELECT customer_id, node_id, start_date, end_date,
+      	LEAD(node_id) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_node_id, 
+      	LEAD(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_start_date
       FROM data_bank.customer_nodes)
     
     SELECT 
@@ -199,116 +201,213 @@ Customer Transactions
 
 ### **Q2. What is the average total historical deposit counts and amounts for all customers?**
 ```SQL
+    SELECT ROUND(AVG(deposit_count), 2) AS avg_deposit_count,
+    ROUND(AVG(sum_amount), 2) AS avg_amount
+    FROM (
+      SELECT customer_id, COUNT(txn_type) AS deposit_count, SUM(txn_amount) AS sum_amount
+      FROM data_bank.customer_transactions
+      WHERE txn_type = 'deposit'
+      GROUP BY customer_id) AS cte_customer_avg_amount;
+```
+| avg_deposit_count | avg_amount |
+| ----------------- | ---------- |
+| 5.34              | 2718.34    |
 
-
-### **Q3. Is there any relationship between the number of pizzas and how long the order takes to prepare?**
+### **Q3. For each month - how many Data Bank customers make more than 1 deposit and either 1 purchase or 1 withdrawal in a single month?**
 ```SQL
-SELECT
-  ru.order_id,
-  count(co.pizza_id) AS pizzas_count,
-  ROUND(EXTRACT(EPOCH FROM (ru.pickup_time::TIMESTAMP - co.order_time))::DECIMAL/60, 2) AS avg_time,
-  CASE  WHEN COUNT(co.pizza_id) = 1 THEN 'Takes more than 10 minutes to prepare'
-	WHEN COUNT(co.pizza_id) > 1 THEN 'Preparation time is based on order quantity, approximately or more than 10 minutes per order' END AS relationship
-FROM runner_orders AS ru
-JOIN customer_orders AS co
-  ON co.order_id = ru.order_id 
-WHERE ru.pickup_time IS NOT NULL
-GROUP BY ru.order_id, ru.pickup_time, co.order_time
-ORDER BY ru.order_id;
+    WITH activity_count AS (
+    SELECT 
+      customer_id, 
+      DATE_PART('month', txn_date) AS txn_month, 
+      TO_CHAR(txn_date, 'month') AS month_name, 
+      SUM(CASE WHEN txn_type = 'deposit' THEN 1 ELSE 0 END) AS total_deposit_monthly, 
+      SUM(CASE WHEN txn_type = 'withdrawal' THEN 1 ELSE 0 END) AS total_withdrawal_monthly, 
+      SUM(CASE WHEN txn_type = 'purchase' THEN 1 ELSE 0 END) AS total_purchase_monthly
+    FROM data_bank.customer_transactions
+    GROUP BY customer_id, txn_month, month_name)
+    
+    SELECT month_name, COUNT(customer_id) AS customer_count
+    FROM activity_count
+    WHERE total_deposit_monthly > 1 AND (total_withdrawal_monthly >= 1 OR total_purchase_monthly >= 1)
+    GROUP BY txn_month, month_name
+    ORDER BY txn_month;
 ```
 
-|order_id| pizzas_count | avg_time |			relationship		    |
-|--------|--------------|----------|------------------------------------------------|
-|  1	 |	1	|   10.53  |	Takes more than 10 minutes to prepare	    |
-|  2	 |	1	|   10.03  |	Takes more than 10 minutes to prepare	    |
-|  3	 |	2	|   21.23  |	Preparation time is based on order quantity |
-|  4	 |	3	|   29.28  |	Preparation time is based on order quantity |
-|  5	 |	1	|   10.47  |	Takes more than 10 minutes to prepare	    |
-|  7	 |	1	|   10.27  |	Takes more than 10 minutes to prepare	    |
-|  8	 |	1	|   20.48  |	Takes more than 10 minutes to prepare	    |
-|  10	 |	2	|   15.52  |	Preparation time is based on order quantity |
+| month_name | customer_count |
+| ---------- | -------------- |
+| january    | 168            |
+| february   | 181            |
+| march      | 192            |
+| april      | 70             |
 
-### **Q4. What was the average distance travelled for each runner?**
+### **Q4. What is the closing balance for each customer at the end of the month?**
 ```SQL
-SELECT  runner_id,
-	ROUND(AVG(distance::DECIMAL), 2) AS avg_distance
-FROM runner_orders
-GROUP BY runner_id
-ORDER BY runner_id;
+    WITH CTE_balance AS (
+    SELECT 
+      customer_id, 
+      EXTRACT(MONTH FROM txn_date) AS txn_month,
+      SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount
+          WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount 
+          ELSE 0 END) AS balance_amount
+    FROM data_bank.customer_transactions
+    GROUP BY customer_id, txn_month)
+    
+    SELECT 
+      customer_id,
+      txn_month,
+      SUM(balance_amount) OVER(PARTITION BY customer_id ORDER BY txn_month) AS ending_balance
+    FROM CTE_balance
+    LIMIT 10;
 ```
 
-| runner_id | avg_distance |
-|-----------|--------------|
-| 1         | 15.85        |
-| 2         | 23.93        |
-| 3         | 10.00        |
+| customer_id | txn_month | ending_balance |
+| ----------- | --------- | -------------- |
+| 1           | 1         | 312            |
+| 1           | 3         | -640           |
+| 2           | 1         | 549            |
+| 2           | 3         | 610            |
+| 3           | 1         | 144            |
+| 3           | 2         | -821           |
+| 3           | 3         | -1222          |
+| 3           | 4         | -729           |
+| 4           | 1         | 848            |
+| 4           | 3         | 655            |
 
-### **Q5. What was the difference between the longest and shortest delivery times for all orders?**
+### **Q5. What is the percentage of customers who increase their closing balance by more than 5%?**
 ```SQL
-SELECT MAX(duration::INT) - MIN(duration::INT) AS difference
-FROM runner_orders;
+    WITH all_month AS (
+      SELECT customer_id, 
+      	generate_series(DATE_TRUNC('month', MIN(txn_date)), DATE_TRUNC('month', MAX(txn_date)), '1 month')::DATE AS txn_month
+      FROM data_bank.customer_transactions
+      GROUP BY customer_id),
+    
+    CTE_monthly_balance AS (
+      SELECT all_month.customer_id, all_month.txn_month,
+      	COALESCE (SUM(CASE WHEN c.txn_type = 'deposit' THEN c.txn_amount 
+                      WHEN c.txn_type IN('withdrawal', 'purchase') THEN -c.txn_amount
+                      ELSE 0 END), 0) AS closing_balance
+      FROM data_bank.customer_transactions c
+      RIGHT JOIN all_month
+      ON all_month.txn_month = DATE_TRUNC('month', c.txn_date) AND all_month.customer_id = c.customer_id
+      GROUP BY all_month.customer_id, all_month.txn_month),
+    
+    closing_balance AS (
+      SELECT 
+      	customer_id, 
+      	txn_month, 
+      	SUM(closing_balance) OVER(PARTITION BY customer_id ORDER BY txn_month ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ending_balance
+      FROM CTE_monthly_balance),
+    
+    balance_with_lead AS (
+      SELECT 
+      	customer_id, 
+      	txn_month, 
+      	ending_balance, 
+      	LEAD(ending_balance) OVER(PARTITION BY customer_id ORDER BY txn_month) AS next_month_balance
+      FROM closing_balance),
+    
+    filter_customer AS (
+      SELECT customer_id, (next_month_balance - ending_balance)/NULLIF(ending_balance, 0) AS pct_increase_5
+      FROM balance_with_lead
+      WHERE (next_month_balance - ending_balance)/NULLIF(ending_balance, 0) > 0.05
+      GROUP BY customer_id, next_month_balance, ending_balance)
+    
+    SELECT ROUND(100.0*COUNT(DISTINCT customer_id)/
+      (SELECT COUNT(DISTINCT customer_id) 
+      FROM data_bank.customer_transactions), 2) AS pct_customers
+    FROM filter_customer;
 ```
 
-| difference |
-|------------|
-| 30         |
+| pct_customers |
+| ------------- |
+| 75.80         |
 
-### **Q6. What was the average speed for each runner for each delivery and do you notice any trend for these values?**
+</details>
+
+<details>
+	<summary>
+		Data Allocation Challenge
+	</summary>
+	
+### To test out a few different hypotheses - the Data Bank team wants to run an experiment where different groups of customers would be allocated data using 3 different options:
+
+>Option 1: data is allocated based off the amount of money at the end of the previous month
+>Option 2: data is allocated on the average amount of money kept in the account in the previous 30 days
+>Option 3: data is updated real-time
+
+For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
+
+** OPTION 1
 ```SQL
-SELECT
-  ru.order_id,
-  ru.runner_id,
-  COUNT(co.pizza_id) AS pizza_count,
-  ROUND(AVG(distance::DECIMAL), 1) AS distance,
-  ROUND(AVG(duration::INT), 1) AS duration,
-  ROUND(AVG(ru.distance::DECIMAL/ru.duration::INT)*60, 2) AS speed_kmh
-FROM runner_orders AS ru
-JOIN customer_orders AS co
-  ON ru.order_id = co.order_id
-WHERE ru.cancellation IS NULL
-GROUP BY ru.order_id, ru.runner_id
-ORDER BY speed_kmh DESC;
+    WITH cte_running_balance AS (SELECT customer_id, EXTRACT(MONTH FROM txn_date) AS txn_month, SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount
+    WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount ELSE 0 END) AS running_balance_monthly
+    FROM data_bank.customer_transactions
+    GROUP BY customer_id, txn_month
+    ORDER BY customer_id),
+    end_balance_monthly AS (SELECT customer_id, txn_month, running_balance_monthly, SUM(running_balance_monthly) OVER(PARTITION BY customer_id ORDER BY txn_month) AS end_running_balance
+    FROM cte_running_balance)
+    
+    SELECT txn_month, SUM(end_running_balance) AS total_end_running_balance_month
+    FROM end_balance_monthly
+    GROUP BY txn_month
+    ORDER BY txn_month;
 ```
 
-| order_id | runner_id | pizzas_count | distance | duration | speed_kmh |
-|----------|-----------|--------------|----------|----------|-----------|
-| 8        | 2         | 1            | 23.4     | 15       | 93.60 	|
-| 7        | 2         | 1            | 25       | 25       | 60.00 	|
-| 10       | 1         | 2            | 10       | 10       | 60.00 	|
-| 2        | 1         | 1            | 20       | 27       | 44.44 	|
-| 3        | 1         | 2            | 13.4     | 20       | 40.20 	|
-| 5        | 3         | 1            | 10       | 15       | 40.00 	|
-| 1        | 1         | 1            | 20       | 32       | 37.50 	|
-| 4        | 2         | 3            | 23.4     | 40       | 35.10 	|
+| txn_month | total_end_running_balance_month |
+| --------- | ------------------------------- |
+| 1         | 126091                          |
+| 2         | -34350                          |
+| 3         | -194916                         |
+| 4         | -180855                         |
 
-**Finding:**
-- **Orders are listed in decreasing order of average speed:**
-> *Although the fastest order delivered only 1 pizza and the slowest order delivered 3 pizzas, there is no clear trend indicating that more pizzas in an order result in slower delivery speeds.*
-
-
-### **Q7. What is the successful delivery percentage for each runner?**
-```sql
-SELECT
-  ru.runner_id,
-  ROUND(100.0*cte.successful_order/COUNT(ru.order_id)) AS delivery_percent
-FROM runner_orders AS ru
-JOIN (
-    SELECT
-	runner_id,
-	COUNT(order_id) AS successful_order
-    FROM runner_orders
-    WHERE pickup_time IS NOT NULL
-    GROUP BY runner_id) AS cte
- ON cte.runner_id = ru.runner_id
-GROUP BY ru.runner_id, cte.successful_order
-ORDER BY ru.runner_id;
+**OPTION 2
+```SQL
+    WITH running_balance AS (SELECT customer_id, txn_date, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
+    CASE WHEN txn_type = 'deposit' THEN txn_amount
+    WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount ELSE 0 END AS running_balance
+    FROM data_bank.customer_transactions
+    ORDER BY customer_id, txn_date),
+    
+    month_balance AS (
+      SELECT customer_id, txn_date, txn_month, txn_amount, running_balance, SUM(running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date) AS end_running_balance
+    FROM running_balance),
+    
+    avg_rolling_balance AS (SELECT customer_id, txn_date, txn_month, txn_amount, running_balance, end_running_balance,
+    ROUND(AVG(end_running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date RANGE BETWEEN INTERVAL '30 DAYS' PRECEDING AND CURRENT ROW)) AS avg_rolling_30days_running_balance
+    FROM month_balance)
+    
+    SELECT txn_month, SUM(avg_rolling_30days_running_balance) AS total_avg_rolling_balance
+    FROM avg_rolling_balance
+    GROUP BY txn_month
+    ORDER BY txn_month;
 ```
+| txn_month | total_avg_rolling_balance |
+| --------- | ------------------------- |
+| 1         | 548719                    |
+| 2         | 311818                    |
+| 3         | -564995                   |
+| 4         | -361023                   |
 
-| runner_id | delivery_percent |
-|-----------|------------------|
-| 1         | 100              |
-| 2         | 75               |
-| 3         | 50               |
 
-
+**OPTION 3
+```SQL
+    WITH running_balances AS (SELECT customer_id, txn_date, txn_type, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
+    CASE WHEN txn_type = 'deposit' THEN txn_amount
+    WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount ELSE 0 END AS running_balance
+    FROM data_bank.customer_transactions),
+    
+    running_balance_within_month AS (SELECT customer_id, txn_date, txn_month, SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
+    FROM running_balances)
+    
+    SELECT txn_month, SUM(transaction_running_balance) AS total_running_balance
+    FROM running_balance_within_month
+    GROUP BY txn_month
+    ORDER BY txn_month;
+```
+| txn_month | total_running_balance |
+| --------- | --------------------- |
+| 1         | 392122                |
+| 2         | -382800               |
+| 3         | -498557               |
+| 4         | -115770               |
 </details>
