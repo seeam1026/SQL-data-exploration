@@ -32,6 +32,7 @@ The Data Bank team have prepared a data model for this case study as well as a f
 <p align="center">
 <img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/Case%20study%20-%20Data%20Bank/Data%20Bank.png">
 
+---
 ## 📂 Dataset
 Danny has shared with you 3 key datasets for this case study:
 
@@ -43,7 +44,6 @@ View table
 
 The runners table contains the **```region_id```** and their respective **```region_name```** values
 
-
 |region_id|region_name|
 |---------|-----------|
 |1        |Africa     |
@@ -53,7 +53,6 @@ The runners table contains the **```region_id```** and their respective **```reg
 |5        |Oceania    |
 
 </details>
-
 
 ### **```Customer Nodes```**
 
@@ -103,8 +102,8 @@ Below is a sample of the top 10 rows of the **```data_bank.customer_transactions
 |138	      |2020-01-11  |	deposit	|  520      |
 
 </details>
----
 
+---
 ## 🔍 Data Exploration
 
 <details>
