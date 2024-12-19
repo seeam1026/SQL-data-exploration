@@ -10,7 +10,7 @@
 
 ---
 
-## 🛠️ Problem Statement
+## 🛠️Problem Statement
 
 > Danny was scrolling through his Instagram feed when something really caught his eye - “80s Retro Styling and Pizza Is The Future!”
 > 
@@ -337,7 +337,7 @@ Cleaning Data
 </details>
 
 
-## 🔍 Data Exploration
+## 🔍Data Exploration
 
 <details>
 <summary> 
