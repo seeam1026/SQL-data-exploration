@@ -88,18 +88,18 @@ View table
 
 Below is a sample of the top 10 rows of the **```data_bank.customer_transactions```**
 
-|customer_id|txn_date    |txn_type	|txn_amount |
-|-----------|------------|----------|-----------|
-|429	      |2020-01-21  |	deposit	|  82       |  
-|155	      |2020-01-10  |	deposit	|  712      |
-|398	      |2020-01-01  |	deposit	|  196      |    
-|255	      |2020-01-14  |	deposit	|  563      |
-|185	      |2020-01-29  |	deposit	|  626      |
-|309	      |2020-01-13  |	deposit	|  995      |
-|312	      |2020-01-20  |	deposit	|  485      |
-|376	      |2020-01-03  |	deposit	|  706      |
-|188	      |2020-01-13  |	deposit	|  601      |
-|138	      |2020-01-11  |	deposit	|  520      |
+|customer_id|txn_date    |txn_type|txn_amount |
+|-----------|------------|--------|-----------|
+|429	    |2020-01-21  |deposit |  82       |  
+|155	    |2020-01-10  |deposit |  712      |
+|398	    |2020-01-01  |deposit |  196      |    
+|255	    |2020-01-14  |deposit |  563      |
+|185	    |2020-01-29  |deposit |  626      |
+|309	    |2020-01-13  |deposit |  995      |
+|312	    |2020-01-20  |deposit |  485      |
+|376	    |2020-01-03  |deposit |  706      |
+|188	    |2020-01-13  |deposit |  601      |
+|138	    |2020-01-11  |deposit |  520      |
 
 </details>
 
@@ -113,218 +113,93 @@ Customer Nodes Exploration
 
 ### **Q1. How many unique nodes are there on the Data Bank system?**
 ```sql
-SELECT COUNT(pizza_id) as pizza_count
-FROM customer_orders
+SELECT COUNT(DISTINCT node_id) AS unique_nodes
+FROM data_bank.customer_nodes;
 ```
-|pizza_count|
-|-----------|
-|14         |
+|unique_nodes|
+|------------|
+|5	     |
 
-### **Q2. How many unique customer orders were made?**
+### **Q2. What is the number of nodes per region?**
 ```sql
-SELECT COUNT(DISTINCT order_id) AS order_count
-FROM customer_orders;
+SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
+    FROM data_bank.customer_nodes
+    JOIN data_bank.regions
+    ON customer_nodes.region_id = regions.region_id
+    GROUP BY regions.region_name
+    ORDER BY nodes DESC;
 ```
-|order_count|
-|-----------|
-|10         |
 
+| region_name | nodes |
+| ----------- | ----- |
+| Australia   | 770   |
+| America     | 735   |
+| Africa      | 714   |
+| Asia        | 665   |
+| Europe      | 616   |
 
-### **Q3. How many successful orders were delivered by each runner?**
+### **Q3. How many customers are allocated to each region?**
 ```sql
- SELECT runner_id,
-	COUNT(order_id) AS successful_orders
- FROM runner_orders
- WHERE cancellation is NULL
- GROUP BY runner_id;
+    SELECT regions.region_name, COUNT(DISTINCT customer_nodes.customer_id) AS num_of_customer
+    FROM data_bank.customer_nodes
+    JOIN data_bank.regions
+    ON regions.region_id = customer_nodes.region_id
+    GROUP BY regions.region_name
+    ORDER BY num_of_customer DESC;
 ```
 
-| runner_id | successful_orders |
-|-----------|-------------------|
-| 1         | 4                 |
-| 2         | 3                 |
-| 3         | 1                 |
+| region_name | num_of_customer |
+| ----------- | --------------- |
+| Australia   | 110             |
+| America     | 105             |
+| Africa      | 102             |
+| Asia        | 95              |
+| Europe      | 88              |
 
-
-### **Q4. How many of each type of pizza was delivered?**
+### **Q4. How many days on average are customers reallocated to a different node?**
 ```SQL
-SELECT  pizza_names.pizza_name,
-	cte.pizza_type_count
-FROM pizza_names
-JOIN	
-	(SELECT co.pizza_id,
-		COUNT(co.order_id) AS pizza_type_count
-	FROM runner_orders AS ru
-	JOIN customer_orders AS co 
-	ON co.order_id = ru.order_id 
-	WHERE ru.cancellation is NULL
-	GROUP BY co.pizza_id) AS cte
-ON cte.pizza_id = pizza_names.pizza_id
+    WITH CTE AS (
+      SELECT customer_id, node_id, start_date, end_date, LEAD(node_id) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_node_id, LEAD(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_start_date
+      FROM data_bank.customer_nodes)
+    
+    SELECT 
+    ROUND(AVG(CASE WHEN node_id <> next_node_id THEN (next_start_date - start_date) END), 2) AS avg_days_reallocated
+    FROM CTE
+    WHERE next_node_id IS NOT NULL;
+```
+| avg_days_reallocated |
+| -------------------- |
+| 15.63                |
+
+
+### **Q5. What is the median, 80th and 95th percentile for this same reallocation days metric for each region?**
+```SQL
 ```
 
-| pizza_name | pizza_type_count |
-|------------|------------------|
-| Meatlovers | 9                |
-| Vegetarian | 3                |
-
-
-### **Q5. How many Vegetarian and Meatlovers were ordered by each customer?**
-```SQL
-SELECT 	customer_id, 
-	SUM(CASE WHEN pizza_id = 1 THEN 1 ELSE 0 END) AS meat_lovers,
-	SUM(CASE WHEN pizza_id = 2 THEN 1 ELSE 0 END) AS vegetarian
-FROM customer_orders
-GROUP BY customer_id;
-```
-
-| customer_id | meat_lovers | vegetarian |
-|-------------|-------------|------------|
-| 101         | 2           | 1          |
-| 103         | 3           | 1          |
-| 104         | 3           | 0          |
-| 105         | 0           | 1          |
-| 102         | 2           | 1          |
-
-### **Q6. What was the maximum number of pizzas delivered in a single order?**
-```SQL
-SELECT MAX(pizza_count_per_order) AS max_count
-FROM (
-  SELECT
-	co.order_id,
-	COUNT(co.pizza_id) AS pizza_count_per_order
-  FROM runner_orders AS ru
-  JOIN customer_orders AS co
-  	ON co.order_id = ru.order_id
-  WHERE ru.cancellation is NULL
-  GROUP BY co.order_id) AS cte;
- ``` 
-
-| max_count |
-|-----------|
-| 3         |
-
-
-### **Q7. For each customer, how many delivered pizzas had at least 1 change and how many had no changes?**
-```SQL
-SELECT
-  co.customer_id,
-  SUM(CASE WHEN co.exclusions IS NOT NULL OR co.extras IS NOT NULL THEN 1 ELSE 0 END) AS changes,
-  SUM(CASE WHEN co.exclusions is NULL AND co.extras is NULL THEN 1 ELSE 0 END) AS no_change
-FROM runner_orders AS ru
-JOIN customer_orders AS co
-  ON ru.order_id = co.order_id
-WHERE ru.cancellation is NULL
-GROUP BY co.customer_id
-ORDER BY co.customer_id;
-```
-
-| customer_id | changes | no_change |
-|-------------|---------|-----------|
-| 101         | 0       | 2         |
-| 102         | 0       | 3         |
-| 103         | 3       | 3         |
-| 104         | 2       | 2         |
-| 105         | 1       | 1         |
-
-
-### **Q8. How many pizzas were delivered that had both exclusions and extras?**
-```SQL
-SELECT
-  SUM(CASE WHEN co.exclusions IS NOT NULL AND co.extras IS NOT NULL THEN 1 ELSE 0 END) AS pizza_count
-FROM runner_orders AS ru
-JOIN customer_orders AS co
-  ON co.order_id = ru.order_id
-WHERE ru.cancellation IS NULL;
-```  
-
-| pizza_count |
-|-------------|
-| 1           |
-
-
-### **Q9. What was the total volume of pizzas ordered for each hour of the day?**
-```SQL
-SELECT
-  DATE_PART('hour', order_time) AS hour_of_day,
-  COUNT(pizza_id) as pizza_count
-FROM customer_orders
-GROUP BY hour_of_day
-ORDER BY hour_of_day;
-```
-
-| hour_of_day | pizza_count |
-|-------------|-------------|
-| 11          | 1           |
-| 12          | 2           |
-| 13          | 3           |
-| 18          | 3           |
-| 19          | 1           |
-| 21          | 3           |
-| 23          | 1           |
-
-### **Q10. What was the volume of orders for each day of the week?**
-```SQL
-SELECT
-  TO_CHAR(order_time,'day') AS day_of_week,
-  COUNT(pizza_id) AS pizza_count
-FROM customer_orders
-GROUP BY day_of_week, DATE_PART('dow', order_time)
-ORDER BY DATE_PART('dow', order_time);
-```
-
-| day_of_week | pizza_count |
-|-------------|-------------|
-| Friday      | 1           |
-| Saturday    | 5           |
-| Thursday    | 3           |
-| Wednesday   | 5           |
 
 </details>
 
 <details>
 <summary>
-Runner and Customer Experience
+Customer Transactions
 </summary>
 
-### **Q1. How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)**
+### **Q1. What is the unique count and total amount for each transaction type?**
 ```SQL
-WITH runner_signups AS (
-  SELECT
-    runner_id,
-    registration_date,
-    registration_date - ((registration_date - '2021-01-01') % 7)  AS start_of_week
-  FROM pizza_runner.runners
-)
-SELECT
-  start_of_week,
-  COUNT(runner_id) AS signups
-FROM runner_signups
-GROUP BY start_of_week
-ORDER BY start_of_week;
+    SELECT txn_type, COUNT(*) AS total_count, SUM(txn_amount) AS total_amount
+    FROM data_bank.customer_transactions
+    GROUP BY txn_type
+    ORDER BY total_amount;
 ```
+| txn_type   | total_count | total_amount |
+| ---------- | ----------- | ------------ |
+| withdrawal | 1580        | 793003       |
+| purchase   | 1617        | 806537       |
+| deposit    | 2671        | 1359168      |
 
-| start_of_week            | signups |
-|--------------------------|---------|
-| 2021-01-01T00:00:00.000Z | 2       |
-| 2021-01-08T00:00:00.000Z | 1       |
-| 2021-01-15T00:00:00.000Z | 1       |
-
-### **Q2. What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?**
+### **Q2. What is the average total historical deposit counts and amounts for all customers?**
 ```SQL
-SELECT
-  ru.runner_id,
-  DATE_PART('minute', AVG(ru.pickup_time::timestamp - co.order_time)) AS avg_arrival_minutes
-FROM runner_orders AS ru
-JOIN customer_orders AS co 
- ON co.order_id = ru.order_id
-WHERE ru.cancellation IS NULL
-GROUP BY ru.runner_id;
-```
-| runner_id | avg_arrival_minutes |
-|-----------|---------------------|
-| 1         | 15                  |
-| 2         | 23                  |
-| 3         | 10                  |
+
 
 ### **Q3. Is there any relationship between the number of pizzas and how long the order takes to prepare?**
 ```SQL
