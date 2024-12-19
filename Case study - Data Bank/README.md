@@ -65,8 +65,8 @@ Below is a sample of the top 10 rows of the **```data_bank.customer_nodes```**
 
 |customer_id|region_id|node_id|start_date  | end_date  |
 |-----------|---------|-------|------------|-----------|
-|1	        |3        |4	    |2020-01-02  |2020-01-03 |
-|2	        |3        |5      |2020-01-03  |2020-01-17 |
+|1	    |3        |4      |2020-01-02  |2020-01-03 |
+|2	    |3        |5      |2020-01-03  |2020-01-17 |
 |3          |5        |4      |2020-01-27  |2020-02-18 |
 |4          |5        |4      |2020-01-07  |2020-01-19 |
 |5          |3        |3      |2020-01-15  |2020-01-23 |
@@ -116,9 +116,13 @@ Customer Nodes Exploration
 SELECT COUNT(DISTINCT node_id) AS unique_nodes
 FROM data_bank.customer_nodes;
 ```
+>Output
+
 |unique_nodes|
 |------------|
 |5	     |
+
+*There are 5 unique nodes in the Data Bank system.*
 
 ### **Q2. What is the number of nodes per region?**
 ```sql
@@ -129,6 +133,7 @@ SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
     GROUP BY regions.region_name
     ORDER BY nodes DESC;
 ```
+>Output
 
 | region_name | nodes |
 | ----------- | ----- |
@@ -137,6 +142,8 @@ SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
 | Africa      | 714   |
 | Asia        | 665   |
 | Europe      | 616   |
+
+*Australia has the highest number of nodes (770), while Europe has the lowest (616), highlighting a significant disparity in node distribution across regions.*
 
 ### **Q3. How many customers are allocated to each region?**
 ```sql
@@ -147,6 +154,7 @@ SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
     GROUP BY regions.region_name
     ORDER BY num_of_customer DESC;
 ```
+>Output
 
 | region_name | num_of_customer |
 | ----------- | --------------- |
@@ -155,6 +163,8 @@ SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
 | Africa      | 102             |
 | Asia        | 95              |
 | Europe      | 88              |
+
+*Australia has the highest number of customers allocated (110), while Europe has the lowest (88)*
 
 ### **Q4. How many days on average are customers reallocated to a different node?**
 ```SQL
@@ -169,10 +179,13 @@ SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
     FROM CTE
     WHERE next_node_id IS NOT NULL;
 ```
+>Output
+
 | avg_days_reallocated |
 | -------------------- |
 | 15.63                |
 
+*On average approximately 15.63 days, customers are reallocated to a different node*
 
 ### **Q5. What is the median, 80th and 95th percentile for this same reallocation days metric for each region?**
 ```SQL
@@ -193,11 +206,16 @@ Customer Transactions
     GROUP BY txn_type
     ORDER BY total_amount;
 ```
+
+>Output
+
 | txn_type   | total_count | total_amount |
 | ---------- | ----------- | ------------ |
 | withdrawal | 1580        | 793003       |
 | purchase   | 1617        | 806537       |
 | deposit    | 2671        | 1359168      |
+
+*The query reveals that deposit transactions have the highest total count (2671) and total amount (1,359,168), followed by purchase and withdrawal transactions, indicating that deposit transactions constitute the majority of customer activities.*
 
 ### **Q2. What is the average total historical deposit counts and amounts for all customers?**
 ```SQL
@@ -209,10 +227,13 @@ Customer Transactions
       WHERE txn_type = 'deposit'
       GROUP BY customer_id) AS cte_customer_avg_amount;
 ```
+>Output
+
 | avg_deposit_count | avg_amount |
 | ----------------- | ---------- |
 | 5.34              | 2718.34    |
 
+*The query shows that, on average, customers have made approximately 5.34 deposits, with an average total amount of 2,718.34 per customer.*
 ### **Q3. For each month - how many Data Bank customers make more than 1 deposit and either 1 purchase or 1 withdrawal in a single month?**
 ```SQL
     WITH activity_count AS (
@@ -232,6 +253,7 @@ Customer Transactions
     GROUP BY txn_month, month_name
     ORDER BY txn_month;
 ```
+>Output
 
 | month_name | customer_count |
 | ---------- | -------------- |
@@ -240,7 +262,19 @@ Customer Transactions
 | march      | 192            |
 | april      | 70             |
 
+*The query shows the number of customers making more than 1 deposit along with either 1 withdrawal or 1 purchase varies. There is a noticeable decline in the customer count from March to April, suggesting a decrease in such activity.*
 ### **Q4. What is the closing balance for each customer at the end of the month?**
+**Step**
+
+* CTE_balance:
+Selects customer_id, txn_month, and calculates balance_amount based on transaction type.
+Deposits increase the balance, while withdrawals and purchases decrease it.
+Groups by customer_id and txn_month.
+
+* SELECT:
+Calculates the cumulative ending_balance for each customer by summing balance_amount across all previous months, partitioned by customer_id.
+Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER BY txn_month) to achieve this.
+
 ```SQL
     WITH CTE_balance AS (
     SELECT 
@@ -256,10 +290,12 @@ Customer Transactions
       customer_id,
       txn_month,
       SUM(balance_amount) OVER(PARTITION BY customer_id ORDER BY txn_month) AS ending_balance
-    FROM CTE_balance
-    LIMIT 10;
+    FROM CTE_balance;
 ```
+>Output
 
+* Not all output is displayed, considering the number of results that will take up space
+  
 | customer_id | txn_month | ending_balance |
 | ----------- | --------- | -------------- |
 | 1           | 1         | 312            |
@@ -273,7 +309,24 @@ Customer Transactions
 | 4           | 1         | 848            |
 | 4           | 3         | 655            |
 
+**
 ### **Q5. What is the percentage of customers who increase their closing balance by more than 5%?**
+**Step**
+
+* The goal is to calculate the percentage of customers whose closing balance increases by more than 5% between consecutive months.
+
+* Use generate_series to create a continuous list of monthly dates for each customer. This ensures we have a row for every month, even if there are no transactions in that month.
+
+* For each monthly date, calculate the closing_balance using deposits and withdrawals/purchases.
+
+* Compute cumulative balances using the SUM window function. This represents the balance from the start of all previous months.
+
+* Use the LEAD function to get the next month's balance for comparison
+
+* Calculate the percentage increase between the current month’s balance and the next month’s balance.
+
+* Finally, calculate the percentage of customers with a balance increase of more than 5%.
+
 ```SQL
     WITH all_month AS (
       SELECT customer_id, 
