@@ -331,13 +331,15 @@ Customer Transactions
 	
 ### To test out a few different hypotheses - the Data Bank team wants to run an experiment where different groups of customers would be allocated data using 3 different options:
 
->Option 1: data is allocated based off the amount of money at the end of the previous month
->Option 2: data is allocated on the average amount of money kept in the account in the previous 30 days
->Option 3: data is updated real-time
+**Option 1:** data is allocated based off the amount of money at the end of the previous month
 
-For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
+**Option 2:** data is allocated on the average amount of money kept in the account in the previous 30 days
 
-** OPTION 1
+**Option 3:** data is updated real-time
+
+*For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:*
+
+>**OPTION 1**
 ```SQL
     WITH cte_running_balance AS (SELECT customer_id, EXTRACT(MONTH FROM txn_date) AS txn_month, SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount
     WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount ELSE 0 END) AS running_balance_monthly
@@ -352,7 +354,8 @@ For this multi-part challenge question - you have been requested to generate the
     GROUP BY txn_month
     ORDER BY txn_month;
 ```
-
+### Output
+*Insight:*
 | txn_month | total_end_running_balance_month |
 | --------- | ------------------------------- |
 | 1         | 126091                          |
@@ -360,7 +363,7 @@ For this multi-part challenge question - you have been requested to generate the
 | 3         | -194916                         |
 | 4         | -180855                         |
 
-**OPTION 2
+>**OPTION 2**
 ```SQL
     WITH running_balance AS (SELECT customer_id, txn_date, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
     CASE WHEN txn_type = 'deposit' THEN txn_amount
@@ -381,6 +384,9 @@ For this multi-part challenge question - you have been requested to generate the
     GROUP BY txn_month
     ORDER BY txn_month;
 ```
+### Output
+*Insight:*
+
 | txn_month | total_avg_rolling_balance |
 | --------- | ------------------------- |
 | 1         | 548719                    |
@@ -389,7 +395,7 @@ For this multi-part challenge question - you have been requested to generate the
 | 4         | -361023                   |
 
 
-**OPTION 3
+>**OPTION 3**
 ```SQL
     WITH running_balances AS (SELECT customer_id, txn_date, txn_type, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
     CASE WHEN txn_type = 'deposit' THEN txn_amount
@@ -404,6 +410,9 @@ For this multi-part challenge question - you have been requested to generate the
     GROUP BY txn_month
     ORDER BY txn_month;
 ```
+### Output
+*Insight*
+
 | txn_month | total_running_balance |
 | --------- | --------------------- |
 | 1         | 392122                |
