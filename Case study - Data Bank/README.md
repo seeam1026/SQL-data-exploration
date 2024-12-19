@@ -30,7 +30,7 @@ This case study is all about calculating metrics, growth and helping the busines
 The Data Bank team have prepared a data model for this case study as well as a few example rows from the complete dataset below to get you familiar with their tables.
 
 <p align="center">
-<img src="https://github.com/Chisomnwa/SQL-Challenge-Case-Study-4---Data-Bank/blob/main/Images/ERD%20-%20%20Data%20Bank.png">
+<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/Case%20study%20-%20Data%20Bank/Data%20Bank.png">
 
 ## 📂 Dataset
 Danny has shared with you 3 key datasets for this case study:
