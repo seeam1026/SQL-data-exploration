@@ -578,16 +578,17 @@ GROUP BY ru.order_id, ru.pickup_time, co.order_time
 ORDER BY ru.order_id;
 ```
 
-|order_id| pizzas_count | avg_time |			relationship		                |
-|--------|--------------|----------|------------------------------------------------|
-|  1	 |	1	        |   10.53  |	Takes more than 10 minutes to prepare	    |
-|  2	 |	1	        |   10.03  |	Takes more than 10 minutes to prepare	    |
-|  3	 |	2	        |   21.23  |	Preparation time is based on order quantity |
-|  4	 |	3	        |   29.28  |	Preparation time is based on order quantity |
-|  5	 |	1	        |   10.47  |	Takes more than 10 minutes to prepare	    |
-|  7	 |	1	        |   10.27  |	Takes more than 10 minutes to prepare	    |
-|  8	 |	1	        |   20.48  |	Takes more than 10 minutes to prepare	    |
-|  10	 |	2	        |   15.52  |	Preparation time is based on order quantity |
+| order_id | pizzas_count | avg_time | relationship                                                                                 |
+| -------- | ------------ | -------- | -------------------------------------------------------------------------------------------- |
+| 1        | 1            | 10.53    | Takes more than 10 minutes to prepare                                                        |
+| 2        | 1            | 10.03    | Takes more than 10 minutes to prepare                                                        |
+| 3        | 2            | 21.23    | Preparation time is based on order quantity, approximately or more than 10 minutes per order |
+| 4        | 3            | 29.28    | Preparation time is based on order quantity, approximately or more than 10 minutes per order |
+| 5        | 1            | 10.47    | Takes more than 10 minutes to prepare                                                        |
+| 7        | 1            | 10.27    | Takes more than 10 minutes to prepare                                                        |
+| 8        | 1            | 20.48    | Takes more than 10 minutes to prepare                                                        |
+| 10       | 2            | 15.52    | Preparation time is based on order quantity, approximately or more than 10 minutes per order |
+
 
 ### **Q4. What was the average distance travelled for each runner?**
 ```SQL
