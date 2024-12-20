@@ -563,7 +563,7 @@ Calculate the average balance over the past 30 days for each transaction date, e
 Sum the 30-day rolling averages for each month to derive total average rolling balances.
 
 ```SQL
-    avg_rolling_balance AS (
+    WITH avg_rolling_balance AS (
       SELECT 
       	customer_id, 
       	txn_date, 
