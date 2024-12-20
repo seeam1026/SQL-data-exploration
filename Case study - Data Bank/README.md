@@ -604,14 +604,47 @@ The cumulative average balance remains negative (-361,023). This shows persisten
 
 --
 >**OPTION 3**
+**Steps in query:**
+* **Step 1: running_balances CTE:**
+
+Calculates the running balance for each transaction based on the transaction types
+
 ```SQL
-    WITH running_balances AS (SELECT customer_id, txn_date, txn_type, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
-    CASE WHEN txn_type = 'deposit' THEN txn_amount
-    WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount ELSE 0 END AS running_balance
-    FROM data_bank.customer_transactions),
+    SELECT 
+    	customer_id, 
+        txn_date, 
+        txn_type, 
+        txn_amount, 
+        EXTRACT(MONTH FROM txn_date) AS txn_month,
+        CASE WHEN txn_type = 'deposit' THEN txn_amount 
+        	WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount 
+            ELSE 0 END AS running_balance
+    FROM data_bank.customer_transactions
+```
+
+* **Step 2: running_balance_within_month CTE:**
+For each customer and month, computes the cumulative balance up to each transaction.
+```SQL
+    WITH running_balances AS (
+      SELECT customer_id, txn_date, txn_type, txn_amount, 
+      	EXTRACT(MONTH FROM txn_date) AS txn_month, 
+      	CASE WHEN txn_type = 'deposit' THEN txn_amount
+      		WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount 
+      		ELSE 0 END AS running_balance
+      FROM data_bank.customer_transactions)
     
-    running_balance_within_month AS (SELECT customer_id, txn_date, txn_month, SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
-    FROM running_balances)
+      SELECT customer_id, txn_date, txn_month, 
+      	SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
+      FROM running_balances
+```
+* **Step 3: Final Aggregation:**
+The monthly total running balance is calculated by summing the cumulative balances for each month:
+
+```SQL
+    WITH running_balance_within_month AS (
+      SELECT customer_id, txn_date, txn_month, 
+      	SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
+      FROM running_balances)
     
     SELECT txn_month, SUM(transaction_running_balance) AS total_running_balance
     FROM running_balance_within_month
@@ -620,12 +653,15 @@ The cumulative average balance remains negative (-361,023). This shows persisten
 ```
 >Output
 
-*Insight*
-
 | txn_month | total_running_balance |
 | --------- | --------------------- |
 | 1         | 392122                |
 | 2         | -382800               |
 | 3         | -498557               |
 | 4         | -115770               |
+
+*Insight for Data Allocation:*
+
+February and March show significant negative balances, meaning that more data should be allocated for these months. This is because transactions during these months involve more withdrawals and expenses, reducing the balances significantly.
+January, on the other hand, demonstrates a positive balance, so less data would be required, as the cumulative effect is driven primarily by deposits and lower transaction expenses.
 </details>
