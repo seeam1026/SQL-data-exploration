@@ -391,11 +391,11 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
 
 For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
 
-*running customer balance column that includes the impact each transaction*
+* *running customer balance column that includes the impact each transaction*
 
-*customer balance at the end of each month*
+* *customer balance at the end of each month*
 
-*minimum, average and maximum values of the running balance for each customer*
+* *minimum, average and maximum values of the running balance for each customer*
 
 ---
 >**OPTION 1**
@@ -405,14 +405,14 @@ Calculate the end-of-month balances for each customer based on their transaction
 Sum these balances across all customers for each month to estimate the total data allocation requirements.
 
 **Steps in query:**
->**Step 1: Prepare a Running Balance for Each Month:**
+* **Step 1: Prepare a Running Balance for Each Month:**
 
 Use a CASE statement to calculate the net transaction amount for each customer during a specific month:
 Add amounts for deposits.
 Subtract amounts for withdrawals or purchases.
 Use GROUP BY on customer_id and txn_month to aggregate monthly running balances.
 
->**Step 2: Calculate End-of-Month Balances:**
+* **Step 2: Calculate End-of-Month Balances:**
 
 Use a window function (SUM with OVER) to calculate the cumulative balance for each customer up to the end of each month.
 Partition the calculation by customer_id and order it by txn_month
@@ -453,7 +453,7 @@ Partition the calculation by customer_id and order it by txn_month
 | 4           | 3         | -193                    | 655                 |
 
 
->**Step 3: Aggregate Total Monthly Balances:**
+* **Step 3: Aggregate Total Monthly Balances:**
 
 Sum the end_running_balance across all customers for each month.
 Group the results by txn_month and order them to display balances chronologically.
@@ -498,16 +498,16 @@ Customers may exhibit a "deposit early, spend later" pattern, with withdrawals a
 
 **-> Resource Allocation:**
 
-January:
+* January:
 The cumulative balance is positive (126,091), so data needs to be allocated for this positive balance. This reflects a month where deposits outweigh withdrawals or purchases.
 
-February:
+* February:
 The cumulative balance turns negative (-34,350), which means more withdrawals or purchases were made than deposits. Therefore, data allocation should also account for this negative balance as it represents accounts with a deficit.
 
-March:
+* March:
 The cumulative balance is much lower at -194,916, showing a greater deficit compared to February. This indicates a higher level of withdrawals or purchases that require data management.
 
-April:
+* April:
 The cumulative balance slightly improves but remains negative at -180,855. This means that even though it’s an improvement from March, it still requires data to manage accounts with negative balances.
 
 Insight for Data Allocation:
@@ -518,12 +518,12 @@ Even negative balances require data: While negative balances may seem to represe
 
 **Steps in query:**
 
->**Step 1: Running Balance:**
+* **Step 1: Running Balance:**
 
 Create a cumulative balance for each transaction by considering deposits as positive values and withdrawals/purchases as negative values. 
 Use the CTE  to calculate the cumulative balance (end_running_balance) for each customer on each transaction date.
 
->**Step 2: 30-Day Rolling Average:**
+* **Step 2: 30-Day Rolling Average:**
 
 Calculate the average balance over the past 30 days for each transaction date, ensuring data allocation considers short-term account activity.
 
@@ -558,7 +558,7 @@ Calculate the average balance over the past 30 days for each transaction date, e
 | 3           | 2020-03-05 | 3         | 213        | -213            | -1034               | -928                               |
 | 3           | 2020-03-19 | 3         | 188        | -188            | -1222               | -1026                              |
 
->**Step 3: Final Aggregation:**
+* **Step 3: Final Aggregation:**
 
 Sum the 30-day rolling averages for each month to derive total average rolling balances.
 
@@ -590,16 +590,16 @@ Sum the 30-day rolling averages for each month to derive total average rolling b
 
 *Insight:*
 
-January:
+* January:
 The cumulative average balance over the past 30 days is positive (548,719). This indicates that, on average, more deposits occurred compared to withdrawals and purchases.
 
-February:
+* February:
 The 30-day rolling average balance decreases to 311,818. While still positive, it reflects a decline in activity compared to January.
 
-March:
+* March:
 The balance turns negative (-564,995). This suggests that withdrawals and purchases significantly outweigh deposits, requiring more data allocation for accounts with deficits.
 
-April:
+* April:
 The cumulative average balance remains negative (-361,023). This shows persistent negative account balances, and thus higher data management is necessary to handle deficit scenarios.
 
 --
