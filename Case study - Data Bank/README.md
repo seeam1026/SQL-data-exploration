@@ -188,9 +188,41 @@ ORDER BY nodes DESC;
 *On average approximately 15.63 days, customers are reallocated to a different node*
 
 ### **Q5. What is the median, 80th and 95th percentile for this same reallocation days metric for each region?**
+
 ```SQL
+    WITH CTE AS (
+      SELECT 
+      	region_id,
+      	customer_id, 
+      	node_id, 
+      	start_date, 
+      	end_date, 
+      	LEAD(node_id) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_node_id, 
+      	LEAD(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_start_date
+      FROM data_bank.customer_nodes)
+      
+        SELECT 
+        	regions.region_id, 
+        	regions.region_name, 
+        	PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY CTE.next_start_date - CTE.start_date) AS median_realocation_day,
+        	PERCENTILE_CONT(0.8) WITHIN GROUP (ORDER BY CTE.next_start_date - CTE.start_date) AS percent_80,
+        	PERCENTILE_CONT(0.95)  WITHIN GROUP (ORDER BY CTE.next_start_date - CTE.start_date) AS percent_95
+        FROM CTE
+        JOIN data_bank.regions 
+          ON regions.region_id = CTE.region_id
+        WHERE CTE.next_node_id IS NOT NULL AND CTE.node_id <> CTE.next_node_id
+        GROUP BY regions.region_id, regions.region_name;
 ```
 
+>Output
+
+| region_id | region_name | median_realocation_day | percent_80 | percent_95 |
+| --------- | ----------- | ---------------------- | ---------- | ---------- |
+| 1         | Australia   | 15.5                   | 24         | 29         |
+| 2         | America     | 16                     | 24         | 29         |
+| 3         | Africa      | 16                     | 25         | 29         |
+| 4         | Asia        | 15                     | 24         | 29         |
+| 5         | Europe      | 16                     | 26         | 29         |
 
 </details>
 
