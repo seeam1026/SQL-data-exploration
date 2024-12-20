@@ -391,11 +391,11 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
 
 For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
 
-* *running customer balance column that includes the impact each transaction*
+* running customer balance column that includes the impact each transaction
 
-* *customer balance at the end of each month*
+* customer balance at the end of each month
 
-* *minimum, average and maximum values of the running balance for each customer*
+* minimum, average and maximum values of the running balance for each customer
 
 ---
 >**OPTION 1**
@@ -604,6 +604,7 @@ The cumulative average balance remains negative (-361,023). This shows persisten
 
 --
 >**OPTION 3**
+
 **Steps in query:**
 * **Step 1: Calculates the running balance for each transaction based on the transaction types**
 
