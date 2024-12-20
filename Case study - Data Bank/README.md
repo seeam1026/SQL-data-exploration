@@ -391,8 +391,10 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
 
 *For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:*
 
+---
 >**OPTION 1**
-Objective
+
+**Objective**
 Calculate the end-of-month balances for each customer based on their transactions.
 Sum these balances across all customers for each month to estimate the total data allocation requirements.
 
@@ -470,7 +472,7 @@ Group the results by txn_month and order them to display balances chronologicall
 | 3         | -194916                         |
 | 4         | -180855                         |
 
-*Insights:*
+**Insights:**
 The first month (January) shows a positive cumulative end balance of 126,091, indicating a net deposit-heavy behavior among customers.
 This could reflect customers' tendency to deposit or maintain higher balances early in the year.
 Negative Balances in Subsequent Months:
@@ -480,15 +482,16 @@ Slight Recovery in April:
 
 In April, there’s a slight improvement (-180,855) compared to March, which may indicate a stabilization or reduction in withdrawal/purchase activity.
 
-*Behavioral Patterns:*
+**Behavioral Patterns:**
 Customers may exhibit a "deposit early, spend later" pattern, with withdrawals and purchases dominating after January.
 
--> Resource Allocation:
+**-> Resource Allocation:**
 Positive end balance in January indicates a net deposit-heavy month, likely involving a higher volume of transactions.
 Decline in Subsequent Months:
 Negative balances from February to April suggest fewer deposits and potentially lower transaction volumes overall.
 Thus, January is the key month for provisioning higher data allocation to meet the peak transaction activity.
 
+---
 >**OPTION 2**
 ```SQL
     WITH running_balance AS (SELECT customer_id, txn_date, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
@@ -521,7 +524,7 @@ Thus, January is the key month for provisioning higher data allocation to meet t
 | 3         | -564995                   |
 | 4         | -361023                   |
 
-
+---
 >**OPTION 3**
 ```SQL
     WITH running_balances AS (SELECT customer_id, txn_date, txn_type, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
