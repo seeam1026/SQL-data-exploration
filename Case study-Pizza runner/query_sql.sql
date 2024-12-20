@@ -401,28 +401,33 @@ ON cte_total_pizza.customer_id = info_successful_diliveries.customer_id;
 
 -- If a Meat Lovers pizza was $12 and Vegetarian $10 fixed prices with no cost for extras and each runner is paid $0.30 per kilometre traveled - how much money does Pizza Runner have left over after these deliveries?
 
-WITH CTE AS (
-  WITH cte2 AS (
-    SELECT co.order_id, ru.runner_id,
-      CASE WHEN co.pizza_id = 1 THEN COUNT(pizza_id)*12 ELSE COUNT(pizza_id)*10 END AS total_revenue
-    FROM customer_orders AS co
-    JOIN runner_orders AS ru
-      ON co.order_id = ru.order_id
-    WHERE ru.pickup_time IS NOT NULL
-    GROUP BY co.order_id, ru.runner_id, co.pizza_id
-    ORDER BY co.order_id)
-  SELECT order_id, runner_id, SUM(total_revenue) AS revenue
-  FROM cte2
+WITH cte_money AS (
+  SELECT co.order_id, ru.runner_id, CASE WHEN co.pizza_id = 1 THEN COUNT(pizza_id)*12 ELSE COUNT(pizza_id)*10 END AS total_money
+  FROM customer_orders AS co
+  JOIN runner_orders AS ru
+  ON co.order_id = ru.order_id
+  WHERE ru.pickup_time <> 'null'
+  GROUP BY co.order_id, ru.runner_id, co.pizza_id
+  ORDER BY co.order_id),
+
+cte_revenue AS ( 
+  SELECT order_id, runner_id, SUM(total_money) AS total_revenue
+  FROM cte_money
   GROUP BY order_id, runner_id),
-  
-cte3 AS  (
-  SELECT order_id, runner_id, ROUND(0.3*distance::DECIMAL, 2) AS total_cost
+
+cte_cost AS (
+  SELECT order_id, runner_id, round(0.3*distance::DECIMAL, 2) AS total_cost
   FROM runner_orders
-  WHERE pickup_time IS NOT NULL
+  WHERE pickup_time <> 'null'
   GROUP BY order_id, runner_id, distance
   ORDER BY order_id)
-  
-SELECT CTE.order_id, CTE.runner_id, CTE.revenue, cte3.total_cost, CTE.revenue - cte3.total_cost AS total_profit
-FROM CTE
-JOIN cte3 
-  ON cte3.order_id = CTE.order_id;
+
+SELECT 
+	cte_revenue.order_id, 
+    cte_revenue.runner_id, 
+    cte_revenue.total_revenue, 
+    cte_cost.total_cost, 
+    cte_revenue.total_revenue - cte_cost.total_cost AS total_profit
+FROM cte_revenue
+JOIN cte_cost 
+ON cte_cost.order_id = cte_revenue.order_id;
