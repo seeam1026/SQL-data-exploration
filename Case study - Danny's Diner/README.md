@@ -20,7 +20,7 @@
 
 ## 📂 Dataset
 <p align="center">
-<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/Case%20study-Pizza%20runner/pizza-project.png">
+<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/Case%20study%20-%20Danny's%20Diner/Danny's%20Diner%20-%20erd.png">
 
 Danny has shared with you 3 key datasets for this case study:
 
