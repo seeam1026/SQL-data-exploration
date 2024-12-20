@@ -605,9 +605,7 @@ The cumulative average balance remains negative (-361,023). This shows persisten
 --
 >**OPTION 3**
 **Steps in query:**
-* **Step 1: running_balances CTE:**
-
-Calculates the running balance for each transaction based on the transaction types
+* **Step 1: Calculates the running balance for each transaction based on the transaction types**
 
 ```SQL
     SELECT 
@@ -621,9 +619,23 @@ Calculates the running balance for each transaction based on the transaction typ
             ELSE 0 END AS running_balance
     FROM data_bank.customer_transactions
 ```
+>Sample output
 
-* **Step 2: running_balance_within_month CTE:**
-For each customer and month, computes the cumulative balance up to each transaction.
+| customer_id | txn_date   | txn_type | txn_amount | txn_month | running_balance |
+| ----------- | ---------- | -------- | ---------- | --------- | --------------- |
+| 429         | 2020-01-21 | deposit  | 82         | 1         | 82              |
+| 155         | 2020-01-10 | deposit  | 712        | 1         | 712             |
+| 398         | 2020-01-01 | deposit  | 196        | 1         | 196             |
+| 255         | 2020-01-14 | deposit  | 563        | 1         | 563             |
+| 185         | 2020-01-29 | deposit  | 626        | 1         | 626             |
+| 309         | 2020-01-13 | deposit  | 995        | 1         | 995             |
+| 312         | 2020-01-20 | deposit  | 485        | 1         | 485             |
+| 376         | 2020-01-03 | deposit  | 706        | 1         | 706             |
+| 188         | 2020-01-13 | deposit  | 601        | 1         | 601             |
+| 138         | 2020-01-11 | deposit  | 520        | 1         | 520             |
+
+* **Step 2: For each customer and month, computes the cumulative balance up to each transaction.**
+  
 ```SQL
     WITH running_balances AS (
       SELECT customer_id, txn_date, txn_type, txn_amount, 
@@ -637,7 +649,23 @@ For each customer and month, computes the cumulative balance up to each transact
       	SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
       FROM running_balances
 ```
+>Sample output
+
+| customer_id | txn_date   | txn_month | transaction_running_balance |
+| ----------- | ---------- | --------- | --------------------------- |
+| 1           | 2020-01-02 | 1         | 312                         |
+| 1           | 2020-03-05 | 3         | -612                        |
+| 1           | 2020-03-17 | 3         | -288                        |
+| 1           | 2020-03-19 | 3         | -952                        |
+| 2           | 2020-01-03 | 1         | 549                         |
+| 2           | 2020-03-24 | 3         | 61                          |
+| 3           | 2020-01-27 | 1         | 144                         |
+| 3           | 2020-02-22 | 2         | -965                        |
+| 3           | 2020-03-05 | 3         | -213                        |
+| 3           | 2020-03-19 | 3         | -401                        |
+
 * **Step 3: Final Aggregation:**
+  
 The monthly total running balance is calculated by summing the cumulative balances for each month:
 
 ```SQL
