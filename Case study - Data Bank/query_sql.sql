@@ -35,9 +35,6 @@ ORDER BY nodes DESC;
     FROM CTE
     WHERE next_node_id IS NOT NULL;
 
--- What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
-
-
 /* --------------------
    Case Study Questions:
    Customer Transactions
