@@ -392,29 +392,102 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
 *For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:*
 
 >**OPTION 1**
+Objective
+Calculate the end-of-month balances for each customer based on their transactions.
+Sum these balances across all customers for each month to estimate the total data allocation requirements.
+
+**Step 1: Prepare a Running Balance for Each Month:**
+Use a CASE statement to calculate the net transaction amount for each customer during a specific month:
+Add amounts for deposits.
+Subtract amounts for withdrawals or purchases.
+Use GROUP BY on customer_id and txn_month to aggregate monthly running balances.
+
+**Step 2: Calculate End-of-Month Balances:**
+Use a window function (SUM with OVER) to calculate the cumulative balance for each customer up to the end of each month.
+Partition the calculation by customer_id and order it by txn_month
+
 ```SQL
-    WITH cte_running_balance AS (SELECT customer_id, EXTRACT(MONTH FROM txn_date) AS txn_month, SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount
-    WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount ELSE 0 END) AS running_balance_monthly
-    FROM data_bank.customer_transactions
-    GROUP BY customer_id, txn_month
-    ORDER BY customer_id),
-    end_balance_monthly AS (SELECT customer_id, txn_month, running_balance_monthly, SUM(running_balance_monthly) OVER(PARTITION BY customer_id ORDER BY txn_month) AS end_running_balance
-    FROM cte_running_balance)
-    
-    SELECT txn_month, SUM(end_running_balance) AS total_end_running_balance_month
-    FROM end_balance_monthly
-    GROUP BY txn_month
-    ORDER BY txn_month;
+    WITH cte_running_balance AS (
+          SELECT 
+          	customer_id, 
+          	EXTRACT(MONTH FROM txn_date) AS txn_month, 
+          	SUM(CASE WHEN txn_type = 'deposit' THEN txn_amount
+                WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount 
+                ELSE 0 END) AS running_balance_monthly
+          FROM data_bank.customer_transactions
+          GROUP BY customer_id, txn_month
+          ORDER BY customer_id)
+          
+          SELECT 
+          	customer_id, 
+          	txn_month, 
+          	running_balance_monthly, 
+          	SUM(running_balance_monthly) OVER(PARTITION BY customer_id ORDER BY txn_month) AS end_running_balance
+          FROM cte_running_balance
+        
+```
+*Sample output:*
+
+| customer_id | txn_month | running_balance_monthly | end_running_balance |
+| ----------- | --------- | ----------------------- | ------------------- |
+| 1           | 1         | 312                     | 312                 |
+| 1           | 3         | -952                    | -640                |
+| 2           | 1         | 549                     | 549                 |
+| 2           | 3         | 61                      | 610                 |
+| 3           | 1         | 144                     | 144                 |
+| 3           | 2         | -965                    | -821                |
+| 3           | 3         | -401                    | -1222               |
+| 3           | 4         | 493                     | -729                |
+| 4           | 1         | 848                     | 848                 |
+| 4           | 3         | -193                    | 655                 |
+
+**Step 3: Aggregate Total Monthly Balances:**
+Sum the end_running_balance across all customers for each month.
+Group the results by txn_month and order them to display balances chronologically.
+
+```SQL
+   
+        WITH end_balance_monthly AS (
+          SELECT 
+          	customer_id, 
+          	txn_month, 
+          	running_balance_monthly, 
+          	SUM(running_balance_monthly) OVER(PARTITION BY customer_id ORDER BY txn_month) AS end_running_balance
+          FROM cte_running_balance)
+        
+        SELECT txn_month, SUM(end_running_balance) AS total_end_running_balance_month
+        FROM end_balance_monthly
+        GROUP BY txn_month
+        ORDER BY txn_month;
+
 ```
 >Output
 
-*Insight:*
 | txn_month | total_end_running_balance_month |
 | --------- | ------------------------------- |
 | 1         | 126091                          |
 | 2         | -34350                          |
 | 3         | -194916                         |
 | 4         | -180855                         |
+
+*Insights:*
+The first month (January) shows a positive cumulative end balance of 126,091, indicating a net deposit-heavy behavior among customers.
+This could reflect customers' tendency to deposit or maintain higher balances early in the year.
+Negative Balances in Subsequent Months:
+
+Starting from February, the cumulative end balances drop into negative territory, reaching a low of -194,916 in March. This suggests an overall withdrawal or expenditure trend outweighing deposits.
+Slight Recovery in April:
+
+In April, there’s a slight improvement (-180,855) compared to March, which may indicate a stabilization or reduction in withdrawal/purchase activity.
+
+*Behavioral Patterns:*
+Customers may exhibit a "deposit early, spend later" pattern, with withdrawals and purchases dominating after January.
+
+-> Resource Allocation:
+Positive end balance in January indicates a net deposit-heavy month, likely involving a higher volume of transactions.
+Decline in Subsequent Months:
+Negative balances from February to April suggest fewer deposits and potentially lower transaction volumes overall.
+Thus, January is the key month for provisioning higher data allocation to meet the peak transaction activity.
 
 >**OPTION 2**
 ```SQL
