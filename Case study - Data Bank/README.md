@@ -127,11 +127,11 @@ FROM data_bank.customer_nodes;
 ### **Q2. What is the number of nodes per region?**
 ```sql
 SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
-    FROM data_bank.customer_nodes
-    JOIN data_bank.regions
-    ON customer_nodes.region_id = regions.region_id
-    GROUP BY regions.region_name
-    ORDER BY nodes DESC;
+FROM data_bank.customer_nodes
+JOIN data_bank.regions
+ON customer_nodes.region_id = regions.region_id
+GROUP BY regions.region_name
+ORDER BY nodes DESC;
 ```
 >Output
 
