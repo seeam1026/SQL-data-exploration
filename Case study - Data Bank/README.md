@@ -389,22 +389,31 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
 
 **Option 3:** data is updated real-time
 
-*For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:*
+For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
+
+*running customer balance column that includes the impact each transaction*
+
+*customer balance at the end of each month*
+
+*minimum, average and maximum values of the running balance for each customer*
 
 ---
 >**OPTION 1**
 
-**Objective**
+**The Objective:**
 Calculate the end-of-month balances for each customer based on their transactions.
 Sum these balances across all customers for each month to estimate the total data allocation requirements.
 
-**Step 1: Prepare a Running Balance for Each Month:**
+**Steps in query:**
+>**Step 1: Prepare a Running Balance for Each Month:**
+
 Use a CASE statement to calculate the net transaction amount for each customer during a specific month:
 Add amounts for deposits.
 Subtract amounts for withdrawals or purchases.
 Use GROUP BY on customer_id and txn_month to aggregate monthly running balances.
 
-**Step 2: Calculate End-of-Month Balances:**
+>**Step 2: Calculate End-of-Month Balances:**
+
 Use a window function (SUM with OVER) to calculate the cumulative balance for each customer up to the end of each month.
 Partition the calculation by customer_id and order it by txn_month
 
@@ -443,7 +452,9 @@ Partition the calculation by customer_id and order it by txn_month
 | 4           | 1         | 848                     | 848                 |
 | 4           | 3         | -193                    | 655                 |
 
-**Step 3: Aggregate Total Monthly Balances:**
+
+>**Step 3: Aggregate Total Monthly Balances:**
+
 Sum the end_running_balance across all customers for each month.
 Group the results by txn_month and order them to display balances chronologically.
 
@@ -502,8 +513,20 @@ The cumulative balance slightly improves but remains negative at -180,855. This 
 Insight for Data Allocation:
 Even negative balances require data: While negative balances may seem to represent a reduced need for data, they still require allocation because managing deficits is critical for ensuring accurate tracking and customer account health.
 
----
+--
 >**OPTION 2**
+
+**Steps in query:**
+
+>**Step 1: Running Balance:**
+
+Create a cumulative balance for each transaction by considering deposits as positive values and withdrawals/purchases as negative values. 
+Use the CTE  to calculate the cumulative balance (end_running_balance) for each customer on each transaction date.
+
+>**Step 2: 30-Day Rolling Average:**
+
+Calculate the average balance over the past 30 days for each transaction date, ensuring data allocation considers short-term account activity.
+
 ```SQL
     WITH running_balance AS (SELECT customer_id, txn_date, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
     CASE WHEN txn_type = 'deposit' THEN txn_amount
@@ -511,22 +534,52 @@ Even negative balances require data: While negative balances may seem to represe
     FROM data_bank.customer_transactions
     ORDER BY customer_id, txn_date),
     
-    month_balance AS (
+    daily_balance AS (
       SELECT customer_id, txn_date, txn_month, txn_amount, running_balance, SUM(running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date) AS end_running_balance
-    FROM running_balance),
+    FROM running_balance)
     
-    avg_rolling_balance AS (SELECT customer_id, txn_date, txn_month, txn_amount, running_balance, end_running_balance,
+      SELECT customer_id, txn_date, txn_month, txn_amount, running_balance, end_running_balance,
     ROUND(AVG(end_running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date RANGE BETWEEN INTERVAL '30 DAYS' PRECEDING AND CURRENT ROW)) AS avg_rolling_30days_running_balance
-    FROM month_balance)
-    
-    SELECT txn_month, SUM(avg_rolling_30days_running_balance) AS total_avg_rolling_balance
-    FROM avg_rolling_balance
-    GROUP BY txn_month
-    ORDER BY txn_month;
+    FROM daily_balance
+```
+
+>Sample output
+
+| customer_id | txn_date   | txn_month | txn_amount | running_balance | end_running_balance | avg_rolling_30days_running_balance |
+| ----------- | ---------- | --------- | ---------- | --------------- | ------------------- | ---------------------------------- |
+| 1           | 2020-01-02 | 1         | 312        | 312             | 312                 | 312                                |
+| 1           | 2020-03-05 | 3         | 612        | -612            | -300                | -300                               |
+| 1           | 2020-03-17 | 3         | 324        | 324             | 24                  | -138                               |
+| 1           | 2020-03-19 | 3         | 664        | -664            | -640                | -305                               |
+| 2           | 2020-01-03 | 1         | 549        | 549             | 549                 | 549                                |
+| 2           | 2020-03-24 | 3         | 61         | 61              | 610                 | 610                                |
+| 3           | 2020-01-27 | 1         | 144        | 144             | 144                 | 144                                |
+| 3           | 2020-02-22 | 2         | 965        | -965            | -821                | -339                               |
+| 3           | 2020-03-05 | 3         | 213        | -213            | -1034               | -928                               |
+| 3           | 2020-03-19 | 3         | 188        | -188            | -1222               | -1026                              |
+
+>**Step 3: Final Aggregation:**
+
+Sum the 30-day rolling averages for each month to derive total average rolling balances.
+
+```SQL
+    avg_rolling_balance AS (
+      SELECT 
+      	customer_id, 
+      	txn_date, 
+      	txn_month, 
+      	txn_amount, 
+      	running_balance, 
+      	end_running_balance, 
+      	ROUND(AVG(end_running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date RANGE BETWEEN INTERVAL '30 DAYS' PRECEDING AND CURRENT ROW)) AS avg_rolling_30days_running_balance
+      FROM daily_balance)
+      
+     SELECT txn_month, SUM(avg_rolling_30days_running_balance) AS total_avg_rolling_balance
+     FROM avg_rolling_balance
+     GROUP BY txn_month
+     ORDER BY txn_month;
 ```
 >Output
-
-*Insight:*
 
 | txn_month | total_avg_rolling_balance |
 | --------- | ------------------------- |
@@ -535,7 +588,21 @@ Even negative balances require data: While negative balances may seem to represe
 | 3         | -564995                   |
 | 4         | -361023                   |
 
----
+*Insight:*
+
+January:
+The cumulative average balance over the past 30 days is positive (548,719). This indicates that, on average, more deposits occurred compared to withdrawals and purchases.
+
+February:
+The 30-day rolling average balance decreases to 311,818. While still positive, it reflects a decline in activity compared to January.
+
+March:
+The balance turns negative (-564,995). This suggests that withdrawals and purchases significantly outweigh deposits, requiring more data allocation for accounts with deficits.
+
+April:
+The cumulative average balance remains negative (-361,023). This shows persistent negative account balances, and thus higher data management is necessary to handle deficit scenarios.
+
+--
 >**OPTION 3**
 ```SQL
     WITH running_balances AS (SELECT customer_id, txn_date, txn_type, txn_amount, EXTRACT(MONTH FROM txn_date) AS txn_month,
