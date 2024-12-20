@@ -309,7 +309,6 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
 | 4           | 1         | 848            |
 | 4           | 3         | 655            |
 
-**
 ### **Q5. What is the percentage of customers who increase their closing balance by more than 5%?**
 **Step**
 
@@ -407,7 +406,7 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
     GROUP BY txn_month
     ORDER BY txn_month;
 ```
-### Output
+>Output
 *Insight:*
 | txn_month | total_end_running_balance_month |
 | --------- | ------------------------------- |
@@ -437,7 +436,7 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
     GROUP BY txn_month
     ORDER BY txn_month;
 ```
-### Output
+>Output
 *Insight:*
 
 | txn_month | total_avg_rolling_balance |
@@ -463,7 +462,7 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
     GROUP BY txn_month
     ORDER BY txn_month;
 ```
-### Output
+>Output
 *Insight*
 
 | txn_month | total_running_balance |
