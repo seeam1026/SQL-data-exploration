@@ -217,7 +217,7 @@ ORDER BY nodes DESC;
     
 	running_balance_within_month AS (
       SELECT customer_id, txn_date, txn_month, 
-      	SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
+      	SUM(running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
       FROM running_balances)
     
     SELECT txn_month, SUM(transaction_running_balance) AS total_running_balance
