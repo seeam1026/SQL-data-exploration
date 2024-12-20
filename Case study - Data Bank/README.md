@@ -407,6 +407,7 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
     ORDER BY txn_month;
 ```
 >Output
+
 *Insight:*
 | txn_month | total_end_running_balance_month |
 | --------- | ------------------------------- |
@@ -437,6 +438,7 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
     ORDER BY txn_month;
 ```
 >Output
+
 *Insight:*
 
 | txn_month | total_avg_rolling_balance |
@@ -463,6 +465,7 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
     ORDER BY txn_month;
 ```
 >Output
+
 *Insight*
 
 | txn_month | total_running_balance |
