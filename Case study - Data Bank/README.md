@@ -483,7 +483,8 @@ Group the results by txn_month and order them to display balances chronologicall
 | 3         | -194916                         |
 | 4         | -180855                         |
 
-**Insights:**
+***Insights:***
+
 The first month (January) shows a positive cumulative end balance of 126,091, indicating a net deposit-heavy behavior among customers.
 This could reflect customers' tendency to deposit or maintain higher balances early in the year.
 Negative Balances in Subsequent Months:
@@ -588,7 +589,7 @@ Sum the 30-day rolling averages for each month to derive total average rolling b
 | 3         | -564995                   |
 | 4         | -361023                   |
 
-*Insight:*
+***Insight:***
 
 * January:
 The cumulative average balance over the past 30 days is positive (548,719). This indicates that, on average, more deposits occurred compared to withdrawals and purchases.
@@ -635,7 +636,7 @@ The cumulative average balance remains negative (-361,023). This shows persisten
 | 188         | 2020-01-13 | deposit  | 601        | 1         | 601             |
 | 138         | 2020-01-11 | deposit  | 520        | 1         | 520             |
 
-* **Step 2: For each customer and month, computes the cumulative balance up to each transaction.**
+* **Step 2: For each customer computes the cumulative balance up to each transaction**
   
 ```SQL
     WITH running_balances AS (
@@ -647,7 +648,7 @@ The cumulative average balance remains negative (-361,023). This shows persisten
       FROM data_bank.customer_transactions)
     
       SELECT customer_id, txn_date, txn_month, 
-      	SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
+      	SUM(running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
       FROM running_balances;
 ```
 >Sample output
@@ -655,15 +656,15 @@ The cumulative average balance remains negative (-361,023). This shows persisten
 | customer_id | txn_date   | txn_month | transaction_running_balance |
 | ----------- | ---------- | --------- | --------------------------- |
 | 1           | 2020-01-02 | 1         | 312                         |
-| 1           | 2020-03-05 | 3         | -612                        |
-| 1           | 2020-03-17 | 3         | -288                        |
-| 1           | 2020-03-19 | 3         | -952                        |
+| 1           | 2020-03-05 | 3         | -300                        |
+| 1           | 2020-03-17 | 3         | 24                          |
+| 1           | 2020-03-19 | 3         | -640                        |
 | 2           | 2020-01-03 | 1         | 549                         |
-| 2           | 2020-03-24 | 3         | 61                          |
+| 2           | 2020-03-24 | 3         | 610                         |
 | 3           | 2020-01-27 | 1         | 144                         |
-| 3           | 2020-02-22 | 2         | -965                        |
-| 3           | 2020-03-05 | 3         | -213                        |
-| 3           | 2020-03-19 | 3         | -401                        |
+| 3           | 2020-02-22 | 2         | -821                        |
+| 3           | 2020-03-05 | 3         | -1034                       |
+| 3           | 2020-03-19 | 3         | -1222                       |
 
 * **Step 3: Final Aggregation:**
   
@@ -672,7 +673,7 @@ The monthly total running balance is calculated by summing the cumulative balanc
 ```SQL
     WITH running_balance_within_month AS (
       SELECT customer_id, txn_date, txn_month, 
-      	SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
+      	SUM(running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
       FROM running_balances)
     
     SELECT txn_month, SUM(transaction_running_balance) AS total_running_balance
@@ -685,12 +686,43 @@ The monthly total running balance is calculated by summing the cumulative balanc
 | txn_month | total_running_balance |
 | --------- | --------------------- |
 | 1         | 392122                |
-| 2         | -382800               |
-| 3         | -498557               |
-| 4         | -115770               |
+| 2         | 29832                 |
+| 3         | -888338               |
+| 4         | -486315               |
 
-*Insight for Data Allocation:*
+***Insight from Data***
 
-February and March show significant negative balances, meaning that more data should be allocated for these months. This is because transactions during these months involve more withdrawals and expenses, reducing the balances significantly.
-January, on the other hand, demonstrates a positive balance, so less data would be required, as the cumulative effect is driven primarily by deposits and lower transaction expenses.
+* Month 1 shows the highest accumulation:
+
+The large positive balance (392,122) suggests significant deposits or minimal spending, leading to lower storage demands compared to months with negative balances.
+
+* Month 3 indicates the highest withdrawals/spending:
+
+With a record negative balance (-888,338), this month requires the highest data storage capacity to capture frequent transactions in the negative range.
+
+* Month 2 and Month 4 show more balanced trends:
+
+Month 2: Although still positive, the sharp decline from Month 1 (to just 29,832) signals a transition phase.
+
+Month 4: While the balance remains negative, it shows improvement from Month 3, suggesting a stabilization or slowdown in withdrawals/spending.
+
+***Impact on Data Allocation***
+
+* Higher storage allocation for Month 3:
+This month demands the most storage due to frequent transactions leading to a record-high negative balance. Enhanced storage is critical for maintaining transaction continuity.
+
+* Month 1 requires the least storage:
+Positive cash flow and low volatility reduce the need for extensive data storage.
+
+* Balanced allocation for Months 2 and 4:
+  
+Month 2: While positive, its transitional nature necessitates stable storage to handle fluctuations.
+
+Month 4: Despite slight improvement from Month 3, it still requires considerable storage to record negative balance transactions.
+
+***Conclusion***
+
+Prioritize storage allocation as follows:
+Month 3 > Month 4 > Month 2 > Month 1 (in descending order of storage demand).
+
 </details>
