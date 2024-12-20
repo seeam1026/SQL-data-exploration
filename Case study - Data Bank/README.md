@@ -486,10 +486,21 @@ In April, there’s a slight improvement (-180,855) compared to March, which may
 Customers may exhibit a "deposit early, spend later" pattern, with withdrawals and purchases dominating after January.
 
 **-> Resource Allocation:**
-Positive end balance in January indicates a net deposit-heavy month, likely involving a higher volume of transactions.
-Decline in Subsequent Months:
-Negative balances from February to April suggest fewer deposits and potentially lower transaction volumes overall.
-Thus, January is the key month for provisioning higher data allocation to meet the peak transaction activity.
+
+January:
+The cumulative balance is positive (126,091), so data needs to be allocated for this positive balance. This reflects a month where deposits outweigh withdrawals or purchases.
+
+February:
+The cumulative balance turns negative (-34,350), which means more withdrawals or purchases were made than deposits. Therefore, data allocation should also account for this negative balance as it represents accounts with a deficit.
+
+March:
+The cumulative balance is much lower at -194,916, showing a greater deficit compared to February. This indicates a higher level of withdrawals or purchases that require data management.
+
+April:
+The cumulative balance slightly improves but remains negative at -180,855. This means that even though it’s an improvement from March, it still requires data to manage accounts with negative balances.
+
+Insight for Data Allocation:
+Even negative balances require data: While negative balances may seem to represent a reduced need for data, they still require allocation because managing deficits is critical for ensuring accurate tracking and customer account health.
 
 ---
 >**OPTION 2**
