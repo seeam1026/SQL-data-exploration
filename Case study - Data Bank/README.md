@@ -1,4 +1,4 @@
-# 💰 Case Study #4 💰 Data Bank
+# 💰 Case Study #4 - Data Bank
 <p align="center">
 <img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/IMG/Data%20Bank%20png.png" width=40% height=40%>
 
