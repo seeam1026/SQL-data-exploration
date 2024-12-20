@@ -434,7 +434,7 @@ Partition the calculation by customer_id and order it by txn_month
           	txn_month, 
           	running_balance_monthly, 
           	SUM(running_balance_monthly) OVER(PARTITION BY customer_id ORDER BY txn_month) AS end_running_balance
-          FROM cte_running_balance
+          FROM cte_running_balance;
         
 ```
 *Sample output:*
@@ -540,7 +540,7 @@ Calculate the average balance over the past 30 days for each transaction date, e
     
       SELECT customer_id, txn_date, txn_month, txn_amount, running_balance, end_running_balance,
     ROUND(AVG(end_running_balance) OVER(PARTITION BY customer_id ORDER BY txn_date RANGE BETWEEN INTERVAL '30 DAYS' PRECEDING AND CURRENT ROW)) AS avg_rolling_30days_running_balance
-    FROM daily_balance
+    FROM daily_balance;
 ```
 
 >Sample output
@@ -618,7 +618,7 @@ The cumulative average balance remains negative (-361,023). This shows persisten
         CASE WHEN txn_type = 'deposit' THEN txn_amount 
         	WHEN txn_type IN ('withdrawal', 'purchase') THEN -txn_amount 
             ELSE 0 END AS running_balance
-    FROM data_bank.customer_transactions
+    FROM data_bank.customer_transactions;
 ```
 >Sample output
 
@@ -648,7 +648,7 @@ The cumulative average balance remains negative (-361,023). This shows persisten
     
       SELECT customer_id, txn_date, txn_month, 
       	SUM(running_balance) OVER(PARTITION BY customer_id, txn_month ORDER BY txn_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS transaction_running_balance
-      FROM running_balances
+      FROM running_balances;
 ```
 >Sample output
 
