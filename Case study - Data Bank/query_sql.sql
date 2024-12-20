@@ -4,16 +4,16 @@
    --------------------*/
 
 -- How many unique nodes are there on the Data Bank system?
-SELECT COUNT(DISTINCT node_id) AS unique_nodes
-FROM data_bank.customer_nodes;
+  SELECT COUNT(DISTINCT node_id) AS unique_nodes
+  FROM data_bank.customer_nodes;
 
 -- What is the number of nodes per region?
-SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
-FROM data_bank.customer_nodes
-JOIN data_bank.regions
-ON customer_nodes.region_id = regions.region_id
-GROUP BY regions.region_name
-ORDER BY nodes DESC;
+  SELECT regions.region_name, COUNT(customer_nodes.node_id) AS nodes
+  FROM data_bank.customer_nodes
+  JOIN data_bank.regions
+  ON customer_nodes.region_id = regions.region_id
+  GROUP BY regions.region_name
+  ORDER BY nodes DESC;
 
 -- How many customers are allocated to each region?
     SELECT regions.region_name, COUNT(DISTINCT customer_nodes.customer_id) AS num_of_customer
@@ -31,9 +31,43 @@ ORDER BY nodes DESC;
       FROM data_bank.customer_nodes)
     
     SELECT 
-    ROUND(AVG(CASE WHEN node_id <> next_node_id THEN (next_start_date - start_date) END), 2) AS avg_days_reallocated
+    ROUND(AVG(CASE WHEN node_id <> next_node_id THEN (next_start_date - start_date) END), 2) AS avg_reallocation_days
     FROM CTE
     WHERE next_node_id IS NOT NULL;
+
+-- What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
+
+  WITH CTE AS (
+  SELECT 
+  	region_id,
+  	customer_id, 
+  	node_id, 
+  	start_date, 
+  	end_date, 
+  	LEAD(node_id) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_node_id, 
+  	LEAD(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_start_date
+  FROM data_bank.customer_nodes),
+  
+  cte_reallocation_days AS (
+    SELECT 
+    	regions.region_id, 
+    	regions.region_name, 
+    	CTE.next_start_date,
+    	CTE.start_date,
+    	CTE.next_start_date - CTE.start_date AS reallocation_days 
+    FROM CTE
+    JOIN data_bank.regions 
+      ON regions.region_id = CTE.region_id
+    WHERE CTE.next_node_id IS NOT NULL AND CTE.node_id <> CTE.next_node_id)
+    
+    SELECT 
+    region_name, 
+    PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY reallocation_days) AS median_realocation_day,
+    PERCENTILE_CONT(0.8) WITHIN GROUP (ORDER BY reallocation_days) AS percent_80,
+    PERCENTILE_CONT(0.95)  WITHIN GROUP (ORDER BY reallocation_days) AS percent_95
+    FROM cte_reallocation_days
+    GROUP BY region_name, region_id
+    ORDER BY region_id;
 
 /* --------------------
    Case Study Questions:
