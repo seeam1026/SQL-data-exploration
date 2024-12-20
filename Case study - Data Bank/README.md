@@ -264,7 +264,7 @@ Customer Transactions
 
 *The query shows the number of customers making more than 1 deposit along with either 1 withdrawal or 1 purchase varies. There is a noticeable decline in the customer count from March to April, suggesting a decrease in such activity.*
 ### **Q4. What is the closing balance for each customer at the end of the month?**
-**Step**
+**Steps**
 
 * CTE_balance:
 Selects customer_id, txn_month, and calculates balance_amount based on transaction type.
@@ -310,7 +310,7 @@ Uses the window function SUM(balance_amount) OVER(PARTITION BY customer_id ORDER
 | 4           | 3         | 655            |
 
 ### **Q5. What is the percentage of customers who increase their closing balance by more than 5%?**
-**Step**
+**Steps**
 
 * The goal is to calculate the percentage of customers whose closing balance increases by more than 5% between consecutive months.
 
