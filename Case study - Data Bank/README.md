@@ -1,6 +1,6 @@
 # 💰 Case Study #4 - Data Bank
 <p align="center">
-<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/IMG/Data%20Bank%20png.png" width=40% height=40%>
+<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/IMG/case%20study%204.png" width=40% height=40%>
 
 ## 📕 Table Of Contents
   - 🛠️ [Problem Statement](#problem-statement)
