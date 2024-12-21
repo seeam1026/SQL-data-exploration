@@ -1,6 +1,6 @@
 # 🍽️ Case Study #1 - Danny's Diner
 <p align="center">
-<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/IMG/1.png" width=40% height=40%>
+<img src="https://github.com/seeam1026/SQL-data-exploration/blob/main/IMG/case%20study%201.png" width=40% height=40%>
 
 ## 📕 Table Of Contents
   - 🛠️ [Problem Statement](#problem-statement)
