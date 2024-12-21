@@ -97,6 +97,50 @@ Customer Journey
 
 ### **Based off the 8 sample customers provided in the sample from the subscriptions table, write a brief description about each customer’s onboarding journey. Try to keep it as short as possible - you may also want to run some sort of join to make your explanations a bit easier!**
 
+```SQL
+    SELECT customer_id, s.plan_id, plan_name, start_date
+    FROM foodie_fi.subscriptions s
+    JOIN plans
+    ON plans.plan_id = s.plan_id
+    WHERE customer_id < 9
+    ORDER BY customer_id, start_date;
+```
+>Output
+
+| customer_id | plan_id | plan_name     | start_date |
+| ----------- | ------- | ------------- | ---------- |
+| 1           | 0       | trial         | 2020-08-01 |
+| 1           | 1       | basic monthly | 2020-08-08 |
+| 2           | 0       | trial         | 2020-09-20 |
+| 2           | 3       | pro annual    | 2020-09-27 |
+| 3           | 0       | trial         | 2020-01-13 |
+| 3           | 1       | basic monthly | 2020-01-20 |
+| 4           | 0       | trial         | 2020-01-17 |
+| 4           | 1       | basic monthly | 2020-01-24 |
+| 4           | 4       | churn         | 2020-04-21 |
+| 5           | 0       | trial         | 2020-08-03 |
+| 5           | 1       | basic monthly | 2020-08-10 |
+| 6           | 0       | trial         | 2020-12-23 |
+| 6           | 1       | basic monthly | 2020-12-30 |
+| 6           | 4       | churn         | 2021-02-26 |
+| 7           | 0       | trial         | 2020-02-05 |
+| 7           | 1       | basic monthly | 2020-02-12 |
+| 7           | 2       | pro monthly   | 2020-05-22 |
+| 8           | 0       | trial         | 2020-06-11 |
+| 8           | 1       | basic monthly | 2020-06-18 |
+| 8           | 2       | pro monthly   | 2020-08-03 |
+
+**Brief description about each customer’s onboarding journey:**
+
+* Customer 1: Started with a trial on 2020-08-01, upgraded to a basic monthly plan on 2020-08-08.
+* Customer 2: Began with a trial on 2020-09-20, transitioned to a pro annual plan on 2020-09-27.
+* Customer 3: Initiated with a trial on 2020-01-13, moved to a basic monthly plan on 2020-01-20.
+* Customer 4: Started with a trial on 2020-01-17, switched to a basic monthly plan on 2020-01-24, and churned on 2020-04-21.
+* Customer 5: Began with a trial on 2020-08-03, upgraded to a basic monthly plan on 2020-08-10.
+* Customer 6: Started with a trial on 2020-12-23, moved to a basic monthly plan on 2020-12-30, and churned on 2021-02-26.
+* Customer 7: Started with a trial on 2020-02-05, transitioned to a basic monthly plan on 2020-02-12, and upgraded to a pro monthly plan on 2020-05-22.
+* Customer 8: Began with a trial on 2020-06-11, upgraded to a basic monthly plan on 2020-06-18, and then switched to a pro monthly plan on 2020-08-03.
+
 </details>
 
 <details>
@@ -105,7 +149,175 @@ Data Analysis Questions
 </summary>
 
 ### **Q1. How many customers has Foodie-Fi ever had?**
-###
+```SQL
+SELECT COUNT(DISTINCT customer_id) AS total_customer
+FROM subscriptions
+```
+>Output
+
+| total_customer |
+| -------------- |
+| 1000           |
+
+### **Q2. What is the monthly distribution of trial plan start_date values for our dataset - use the start of the month as the group by value**
+```SQL
+    SELECT DATE_TRUNC('month', start_date)::DATE AS start_month, COUNT(*) AS trial_count
+    FROM subscriptions s
+    JOIN plans
+    ON plans.plan_id = s.plan_id
+    WHERE plans.plan_name = 'trial'
+    GROUP BY start_month
+    ORDER BY start_month;
+```
+>Output
+
+| start_month | trial_count |
+| ----------- | ----------- |
+| 2020-01-01  | 88          |
+| 2020-02-01  | 68          |
+| 2020-03-01  | 94          |
+| 2020-04-01  | 81          |
+| 2020-05-01  | 88          |
+| 2020-06-01  | 79          |
+| 2020-07-01  | 89          |
+| 2020-08-01  | 88          |
+| 2020-09-01  | 87          |
+| 2020-10-01  | 79          |
+| 2020-11-01  | 75          |
+| 2020-12-01  | 84          |
+
+### **Q3. What plan start_date values occur after the year 2020 for our dataset? Show the breakdown by count of events for each plan_name**
+```SQL
+    SELECT plan_name, COUNT(*) AS total_event
+    FROM subscriptions s
+    JOIN plans 
+    ON plans.plan_id = s.plan_id
+    WHERE EXTRACT(YEAR FROM start_date) > 2020
+    GROUP BY plan_name;
+```
+>Output
+
+| plan_name     | total_event |
+| ------------- | ----------- |
+| pro annual    | 63          |
+| churn         | 71          |
+| pro monthly   | 60          |
+| basic monthly | 8           |
+
+### **Q4. What is the customer count and percentage of customers who have churned rounded to 1 decimal place?**
+```SQL
+    SELECT ROUND(COUNT(DISTINCT customer_id)/(SELECT COUNT(DISTINCT customer_id) FROM subscriptions)::DECIMAL*100.0, 2) AS churn_percentage
+    FROM subscriptions s
+    JOIN plans
+    ON plans.plan_id = s.plan_id
+    WHERE plan_name = 'churn';
+```
+>Output
+
+| churn_percentage |
+| ---------------- |
+| 30.70            |
+### **Q5. How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?**
+```SQL
+    WITH CTE AS (SELECT customer_id, plan_name, LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS following_plan
+    FROM subscriptions s
+    JOIN plans 
+    ON plans.plan_id = s.plan_id)
+    
+    SELECT ROUND(100*COUNT(DISTINCT customer_id)/(SELECT COUNT(DISTINCT customer_id) FROM subscriptions)::DECIMAL) AS early_churn_percentage
+    FROM CTE
+    WHERE plan_name = 'trial' AND following_plan = 'churn';
+```
+>Output
+
+| early_churn_percentage |
+| ---------------------- |
+| 9                      |
+
+### **Q6. What is the number and percentage of customer plans after their initial free trial?**
+```SQL
+    WITH CTE AS (
+      SELECT customer_id, start_date, plan_name, LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS next_plan 
+      FROM subscriptions s
+      JOIN plans 
+      ON plans.plan_id = s.plan_id)
+    
+    SELECT next_plan, ROUND(100.0*COUNT(DISTINCT customer_id) / (SELECT COUNT(DISTINCT customer_id) FROM subscriptions), 1) AS percentage
+    FROM CTE
+    WHERE plan_name = 'trial' AND next_plan IS NOT NULL
+    GROUP BY next_plan;
+```
+>Output
+
+| next_plan     | percentage |
+| ------------- | ---------- |
+| basic monthly | 54.6       |
+| churn         | 9.2        |
+| pro annual    | 3.7        |
+| pro monthly   | 32.5       |
+
+### **Q7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?**
+```SQL
+    WITH CTE AS (
+      SELECT customer_id, plan_name, start_date, LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_plan
+      FROM subscriptions s
+      JOIN plans 
+      ON plans.plan_id = s.plan_id
+      WHERE start_date <= '2020-12-31')
+      
+    SELECT plan_name, COUNT(DISTINCT customer_id) AS customer_count, ROUND(100.0*COUNT(DISTINCT customer_id)/ (SELECT COUNT(DISTINCT customer_id) FROM subscriptions)::DECIMAL, 1) AS percentage
+    FROM CTE
+    WHERE next_plan IS  NULL
+    GROUP BY plan_name;
+```
+>Output
+
+| plan_name     | customer_count | percentage |
+| ------------- | -------------- | ---------- |
+| basic monthly | 224            | 22.4       |
+| churn         | 236            | 23.6       |
+| pro annual    | 195            | 19.5       |
+| pro monthly   | 326            | 32.6       |
+| trial         | 19             | 1.9        |
+
+### **Q8. How many customers have upgraded to an annual plan in 2020?**
+```SQL
+    WITH CTE AS (
+      SELECT 
+      	customer_id, 
+      	start_date, 
+      	plan_name, 
+      	LEAD(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_start_date,
+      	LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_plan
+      FROM subscriptions s
+      JOIN plans
+      ON plans.plan_id = s.plan_id)
+      
+      SELECT COUNT(DISTINCT customer_id) AS customer_count
+      FROM CTE
+      WHERE EXTRACT(YEAR FROM next_start_date) = 2020
+      AND plan_name != next_plan
+      AND next_plan = 'pro annual'
+```
+>Output
+
+| customer_count |
+| -------------- |
+| 195            |
+
+
+### **Q9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?**
+```SQL
+```
+
+### **Q10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)***
+```SQL
+```
+
+### **Q11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?**
+```SQL
+```
+
 </details>
 
 <details>
