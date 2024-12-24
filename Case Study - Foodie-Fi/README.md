@@ -259,16 +259,25 @@ FROM subscriptions
 ### **Q7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?**
 ```SQL
     WITH CTE AS (
-      SELECT customer_id, plan_name, start_date, LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_plan
-      FROM subscriptions s
-      JOIN plans 
-      ON plans.plan_id = s.plan_id
-      WHERE start_date <= '2020-12-31')
-      
-    SELECT plan_name, COUNT(DISTINCT customer_id) AS customer_count, ROUND(100.0*COUNT(DISTINCT customer_id)/ (SELECT COUNT(DISTINCT customer_id) FROM subscriptions)::DECIMAL, 1) AS percentage
-    FROM CTE
-    WHERE next_plan IS  NULL
-    GROUP BY plan_name;
+          SELECT 
+          	customer_id, 
+          	plan_name, 
+          	start_date, 
+          	LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_plan
+          FROM subscriptions s
+          JOIN plans 
+          ON plans.plan_id = s.plan_id
+          WHERE start_date <= '2020-12-31')
+          
+        SELECT 
+        	plan_name, 
+            COUNT(DISTINCT customer_id) AS customer_count, 
+            ROUND(100.0*COUNT(DISTINCT customer_id)/ (
+              SELECT COUNT(DISTINCT customer_id) 
+              FROM subscriptions)::DECIMAL, 1) AS percentage
+        FROM CTE
+        WHERE next_plan IS  NULL
+        GROUP BY plan_name;
 ```
 >Output
 
@@ -297,7 +306,7 @@ FROM subscriptions
       FROM CTE
       WHERE EXTRACT(YEAR FROM next_start_date) = 2020
       AND plan_name != next_plan
-      AND next_plan = 'pro annual'
+      AND next_plan = 'pro annual';
 ```
 >Output
 
@@ -308,15 +317,87 @@ FROM subscriptions
 
 ### **Q9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?**
 ```SQL
+    WITH annual_subs AS (
+      SELECT 
+      	customer_id, 
+      	start_date AS pro_annual_date, 
+      	plan_name, 
+      	FIRST_VALUE(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_plan,
+      	FIRST_VALUE(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_start_date
+      FROM subscriptions s
+      JOIN plans
+      ON plans.plan_id = s.plan_id )
+    
+    SELECT ROUND(AVG(pro_annual_date - trial_start_date), 1) AS avg_days
+    FROM annual_subs
+    WHERE plan_name = 'pro annual' AND trial_plan = 'trial';
 ```
+>Output
+
+| avg_days |
+| -------- |
+| 104.6    |
 
 ### **Q10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)***
 ```SQL
+    WITH annual_subs AS (
+      SELECT 
+      	customer_id, 
+      	start_date AS pro_annual_date, 
+      	plan_name, 
+      	FIRST_VALUE(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_plan,
+      	FIRST_VALUE(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_start_date
+      FROM subscriptions s
+      JOIN plans
+      ON plans.plan_id = s.plan_id )
+     
+    SELECT 
+    	CONCAT(FLOOR((pro_annual_date - trial_start_date)/30) * 30, ' - ', FLOOR((pro_annual_date - trial_start_date)/30) * 30 + 30, ' days') AS periods, 
+        ROUND(AVG(pro_annual_date - trial_start_date), 1) AS avg_days
+    FROM annual_subs
+    WHERE plan_name = 'pro annual' AND trial_plan = 'trial'
+    GROUP BY FLOOR((pro_annual_date - trial_start_date)/30);
 ```
+>Output
+
+| periods        | avg_days |
+| -------------- | -------- |
+| 0 - 30 days    | 9.5      |
+| 30 - 60 days   | 41.8     |
+| 60 - 90 days   | 70.9     |
+| 90 - 120 days  | 99.8     |
+| 120 - 150 days | 133.0    |
+| 150 - 180 days | 161.5    |
+| 180 - 210 days | 190.3    |
+| 210 - 240 days | 224.3    |
+| 240 - 270 days | 257.2    |
+| 270 - 300 days | 285.0    |
+| 300 - 330 days | 327.0    |
+| 330 - 360 days | 346.0    |
 
 ### **Q11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?**
 ```SQL
+    WITH cte_subs AS (
+      SELECT 
+      	customer_id, 
+      	plan_name, 
+      	start_date, 
+      	LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_plan,
+      	LEAD(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS next_subs_date
+      FROM subscriptions s
+      JOIN plans
+      ON plans.plan_id = s.plan_id)
+    
+    SELECT COUNT(customer_id) AS downgrade_count
+    FROM cte_subs
+    WHERE EXTRACT (YEAR FROM next_subs_date) = 2020
+    AND plan_name = 'pro annual' AND next_plan = 'basic monthly'
 ```
+>Output
+
+| downgrade_count |
+| --------------- |
+| 0               |
 
 </details>
 
@@ -324,7 +405,16 @@ FROM subscriptions
 <summary> 
 Challenge Payment Question
 </summary>
+  
+The Foodie-Fi team wants you to create a new payments table for the year 2020 that includes amounts paid by each customer in the subscriptions table with the following requirements:
 
+* monthly payments always occur on the same day of month as the original start_date of any monthly paid plan
+* upgrades from basic to monthly or pro plans are reduced by the current paid amount in that month and start immediately
+* upgrades from pro monthly to pro annual are paid at the end of the current billing period and also starts at the end of the month period
+* once a customer churns they will no longer make payments
+```SQL
+```
+>Output
 
 </details>
 
