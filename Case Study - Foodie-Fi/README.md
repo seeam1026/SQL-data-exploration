@@ -219,12 +219,18 @@ FROM subscriptions
 | 30.70            |
 ### **Q5. How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?**
 ```SQL
-    WITH CTE AS (SELECT customer_id, plan_name, LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS following_plan
-    FROM subscriptions s
-    JOIN plans 
-    ON plans.plan_id = s.plan_id)
+    WITH CTE AS (
+      SELECT 
+      	customer_id, 
+      	plan_name, 
+      	LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS following_plan
+      FROM subscriptions s
+      JOIN plans 
+      ON plans.plan_id = s.plan_id)
     
-    SELECT ROUND(100*COUNT(DISTINCT customer_id)/(SELECT COUNT(DISTINCT customer_id) FROM subscriptions)::DECIMAL) AS early_churn_percentage
+    SELECT ROUND(100*COUNT(DISTINCT customer_id)/(
+      SELECT COUNT(DISTINCT customer_id) 
+      FROM subscriptions)::DECIMAL) AS early_churn_percentage
     FROM CTE
     WHERE plan_name = 'trial' AND following_plan = 'churn';
 ```
@@ -237,12 +243,20 @@ FROM subscriptions
 ### **Q6. What is the number and percentage of customer plans after their initial free trial?**
 ```SQL
     WITH CTE AS (
-      SELECT customer_id, start_date, plan_name, LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS next_plan 
+      SELECT 
+      	customer_id, 
+      	start_date, 
+      	plan_name, 
+      	LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS next_plan 
       FROM subscriptions s
       JOIN plans 
       ON plans.plan_id = s.plan_id)
     
-    SELECT next_plan, ROUND(100.0*COUNT(DISTINCT customer_id) / (SELECT COUNT(DISTINCT customer_id) FROM subscriptions), 1) AS percentage
+    SELECT 
+    	next_plan, 
+        ROUND(100.0*COUNT(DISTINCT customer_id) / (
+          SELECT COUNT(DISTINCT customer_id) 
+          FROM subscriptions), 1) AS percentage
     FROM CTE
     WHERE plan_name = 'trial' AND next_plan IS NOT NULL
     GROUP BY next_plan;
