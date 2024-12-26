@@ -301,3 +301,55 @@ ORDER BY customer_id;
 | B           | 820         |
 | A           | 1370        |
 
+
+### **Bonus Questions. The following questions are related creating basic data tables that Danny and his team can use to quickly derive insights without needing to join the underlying tables using SQL.**
+
+```SQL
+    WITH CTE AS (
+      SELECT 
+      	sales.customer_id, 
+      	order_date, 
+      	product_name, price, 
+      	CASE WHEN order_date < join_date THEN 'NY' ELSE 'Y' END AS members
+      FROM sales
+      JOIN menu
+      ON sales.product_id = menu.product_id 
+      LEFT JOIN members
+      ON members.customer_id = sales.customer_id),
+    
+    cte_filter AS (
+      SELECT *, DENSE_RANK() OVER(PARTITION BY customer_id ORDER BY order_date) AS ranking 
+      FROM CTE
+      WHERE members = 'Y')
+    
+    SELECT CTE.*, cte_filter.ranking
+    FROM CTE
+    LEFT JOIN cte_filter
+    ON cte.customer_id = cte_filter.customer_id
+    AND cte.order_date = cte_filter.order_date
+    ORDER BY cte.customer_id, cte.order_date
+```
+>Output
+
+| customer_id | order_date | product_name | price | members | ranking |
+| ----------- | ---------- | ------------ | ----- | ------- | ------- |
+| A           | 2021-01-01 | sushi        | 10    | NY      |         |
+| A           | 2021-01-01 | curry        | 15    | NY      |         |
+| A           | 2021-01-07 | curry        | 15    | Y       | 1       |
+| A           | 2021-01-10 | ramen        | 12    | Y       | 2       |
+| A           | 2021-01-11 | ramen        | 12    | Y       | 3       |
+| A           | 2021-01-11 | ramen        | 12    | Y       | 3       |
+| A           | 2021-01-11 | ramen        | 12    | Y       | 3       |
+| A           | 2021-01-11 | ramen        | 12    | Y       | 3       |
+| B           | 2021-01-01 | curry        | 15    | NY      |         |
+| B           | 2021-01-02 | curry        | 15    | NY      |         |
+| B           | 2021-01-04 | sushi        | 10    | NY      |         |
+| B           | 2021-01-11 | sushi        | 10    | Y       | 1       |
+| B           | 2021-01-16 | ramen        | 12    | Y       | 2       |
+| B           | 2021-02-01 | ramen        | 12    | Y       | 3       |
+| C           | 2021-01-01 | ramen        | 12    | Y       | 1       |
+| C           | 2021-01-01 | ramen        | 12    | Y       | 1       |
+| C           | 2021-01-01 | ramen        | 12    | Y       | 1       |
+| C           | 2021-01-01 | ramen        | 12    | Y       | 1       |
+| C           | 2021-01-07 | ramen        | 12    | Y       | 2       |
+
