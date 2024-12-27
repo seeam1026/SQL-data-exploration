@@ -140,6 +140,7 @@ Customer Journey
 * Customer 6: Started with a trial on 2020-12-23, moved to a basic monthly plan on 2020-12-30, and churned on 2021-02-26.
 * Customer 7: Started with a trial on 2020-02-05, transitioned to a basic monthly plan on 2020-02-12, and upgraded to a pro monthly plan on 2020-05-22.
 * Customer 8: Began with a trial on 2020-06-11, upgraded to a basic monthly plan on 2020-06-18, and then switched to a pro monthly plan on 2020-08-03.
+* The free trial period for all customers lasts exactly 7 days. 
 
 </details>
 
@@ -186,6 +187,7 @@ FROM subscriptions
 | 2020-11-01  | 75          |
 | 2020-12-01  | 84          |
 
+*There was not much variation in trial initiations between months. March had the highest number of trial (94), February had the lowest number of trial (68)*
 ### **Q3. What plan start_date values occur after the year 2020 for our dataset? Show the breakdown by count of events for each plan_name**
 ```SQL
     SELECT plan_name, COUNT(*) AS total_event
@@ -204,41 +206,53 @@ FROM subscriptions
 | pro monthly   | 60          |
 | basic monthly | 8           |
 
+*Pro plans (pro annual and pro monthly) performed well after 2020, but churn was high and popularity of basic monthly plan was low.*
+
 ### **Q4. What is the customer count and percentage of customers who have churned rounded to 1 decimal place?**
 ```SQL
-    SELECT ROUND(COUNT(DISTINCT customer_id)/(SELECT COUNT(DISTINCT customer_id) FROM subscriptions)::DECIMAL*100.0, 2) AS churn_percentage
-    FROM subscriptions s
-    JOIN plans
-    ON plans.plan_id = s.plan_id
-    WHERE plan_name = 'churn';
+    SELECT 
+        	COUNT(DISTINCT customer_id) AS churned_customers, 
+            ROUND(COUNT(DISTINCT customer_id)/(
+              SELECT COUNT(DISTINCT customer_id) 
+              FROM subscriptions)::DECIMAL*100.0, 2) AS churn_percentage
+        FROM subscriptions s
+        JOIN plans
+        ON plans.plan_id = s.plan_id
+        WHERE plan_name = 'churn';
 ```
 >Output
 
-| churn_percentage |
-| ---------------- |
-| 30.70            |
+| churned_customers | churn_percentage |
+| ----------------- | ---------------- |
+| 307               | 30.70            |
+
+*Output shows churn percentage = 30.7% of total 1000 customers, this is a high rate, need to find the reason why customers leave (service quality, price, missing features...) and take measures to improve the situation.*
+
 ### **Q5. How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?**
 ```SQL
     WITH CTE AS (
-      SELECT 
-      	customer_id, 
-      	plan_name, 
-      	LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS following_plan
-      FROM subscriptions s
-      JOIN plans 
-      ON plans.plan_id = s.plan_id)
-    
-    SELECT ROUND(100*COUNT(DISTINCT customer_id)/(
-      SELECT COUNT(DISTINCT customer_id) 
-      FROM subscriptions)::DECIMAL) AS early_churn_percentage
-    FROM CTE
-    WHERE plan_name = 'trial' AND following_plan = 'churn';
+          SELECT 
+          	customer_id, 
+          	plan_name, 
+          	LEAD(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS following_plan
+          FROM subscriptions s
+          JOIN plans 
+          ON plans.plan_id = s.plan_id)
+        
+        SELECT COUNT(DISTINCT customer_id) AS customer_count,
+        ROUND(100*COUNT(DISTINCT customer_id)/(
+          SELECT COUNT(DISTINCT customer_id) 
+          FROM subscriptions)::DECIMAL) AS early_churn_percentage
+        FROM CTE
+        WHERE plan_name = 'trial' AND following_plan = 'churn';
 ```
 >Output
 
-| early_churn_percentage |
-| ---------------------- |
-| 9                      |
+| customer_count | early_churn_percentage |
+| -------------- | ---------------------- |
+| 92             | 9                      |
+
+*Output shows that the early churn rate is low (9%)*
 
 ### **Q6. What is the number and percentage of customer plans after their initial free trial?**
 ```SQL
@@ -269,6 +283,8 @@ FROM subscriptions
 | churn         | 9.2        |
 | pro annual    | 3.7        |
 | pro monthly   | 32.5       |
+
+*Output shows that 54.6% of customers use the basic monthly plan after their initial free trial (highest rate), the pro monthly plan is quite popular (32.5%), and the pro annual plan is the lowest rate (3.7%). Needs to decrease 9,2% of customer churn, focus to increase 3.7% of customer use pro annual (discount, special feature...)*
 
 ### **Q7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?**
 ```SQL
@@ -303,6 +319,8 @@ FROM subscriptions
 | pro monthly   | 326            | 32.6       |
 | trial         | 19             | 1.9        |
 
+*Output shows that "pro monthly" is the most popular plan (32.6%), while churn remains significant at 23.6%. Most customers prefer flexibility over long-term commitment, as seen with the lower uptake of "pro annual" (19.5%). Addressing churn and promoting annual plans with added value or discounts could improve retention and revenue.*
+
 ### **Q8. How many customers have upgraded to an annual plan in 2020?**
 ```SQL
     WITH CTE AS (
@@ -328,7 +346,7 @@ FROM subscriptions
 | -------------- |
 | 195            |
 
-
+*Output shows: There are 195 customers upgraded to "pro annual" in 2020*
 ### **Q9. How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?**
 ```SQL
     WITH annual_subs AS (
@@ -352,43 +370,48 @@ FROM subscriptions
 | -------- |
 | 104.6    |
 
+*It takes an average of 3.5 months for customers to pro annual plan from free trial*
+
 ### **Q10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)***
 ```SQL
     WITH annual_subs AS (
-      SELECT 
-      	customer_id, 
-      	start_date AS pro_annual_date, 
-      	plan_name, 
-      	FIRST_VALUE(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_plan,
-      	FIRST_VALUE(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_start_date
-      FROM subscriptions s
-      JOIN plans
-      ON plans.plan_id = s.plan_id )
-     
-    SELECT 
-    	CONCAT(FLOOR((pro_annual_date - trial_start_date)/30) * 30, ' - ', FLOOR((pro_annual_date - trial_start_date)/30) * 30 + 30, ' days') AS periods, 
-        ROUND(AVG(pro_annual_date - trial_start_date), 1) AS avg_days
-    FROM annual_subs
-    WHERE plan_name = 'pro annual' AND trial_plan = 'trial'
-    GROUP BY FLOOR((pro_annual_date - trial_start_date)/30);
+          SELECT 
+          	customer_id, 
+          	start_date AS pro_annual_date, 
+          	plan_name, 
+          	FIRST_VALUE(plan_name) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_plan,
+          	FIRST_VALUE(start_date) OVER(PARTITION BY customer_id ORDER BY start_date) AS trial_start_date
+          FROM subscriptions s
+          JOIN plans
+          ON plans.plan_id = s.plan_id )
+         
+        SELECT 
+        	CONCAT(FLOOR((pro_annual_date - trial_start_date)/30) * 30, ' - ', FLOOR((pro_annual_date - trial_start_date)/30) * 30 + 30, ' days') AS periods, 
+            COUNT(customer_id) AS total_customer,
+            ROUND(AVG(pro_annual_date - trial_start_date), 1) AS avg_days
+        FROM annual_subs
+        WHERE plan_name = 'pro annual' AND trial_plan = 'trial'
+        GROUP BY FLOOR((pro_annual_date - trial_start_date)/30);
 ```
 >Output
 
-| periods        | avg_days |
-| -------------- | -------- |
-| 0 - 30 days    | 9.5      |
-| 30 - 60 days   | 41.8     |
-| 60 - 90 days   | 70.9     |
-| 90 - 120 days  | 99.8     |
-| 120 - 150 days | 133.0    |
-| 150 - 180 days | 161.5    |
-| 180 - 210 days | 190.3    |
-| 210 - 240 days | 224.3    |
-| 240 - 270 days | 257.2    |
-| 270 - 300 days | 285.0    |
-| 300 - 330 days | 327.0    |
-| 330 - 360 days | 346.0    |
+| periods        | total_customer | avg_days |
+| -------------- | -------------- | -------- |
+| 0 - 30 days    | 48             | 9.5      |
+| 30 - 60 days   | 25             | 41.8     |
+| 60 - 90 days   | 33             | 70.9     |
+| 90 - 120 days  | 35             | 99.8     |
+| 120 - 150 days | 43             | 133.0    |
+| 150 - 180 days | 35             | 161.5    |
+| 180 - 210 days | 27             | 190.3    |
+| 210 - 240 days | 4              | 224.3    |
+| 240 - 270 days | 5              | 257.2    |
+| 270 - 300 days | 1              | 285.0    |
+| 300 - 330 days | 1              | 327.0    |
+| 330 - 360 days | 1              | 346.0    |
 
+*Shorter periods like 0-30 days and 30-60 days have significantly higher customer numbers than longer periods. Customers in these periods tend to upgrade their plans faster. 
+After 210 days, A smaller percentage of customers make the decision to upgrade, then after 300 days, there are no more customers who upgrade.*
 ### **Q11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?**
 ```SQL
     WITH cte_subs AS (
@@ -412,6 +435,8 @@ FROM subscriptions
 | downgrade_count |
 | --------------- |
 | 0               |
+
+*There is no customer has downgraded from pro monthly to basic monthly in 2020*
 
 </details>
 
